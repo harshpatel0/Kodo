@@ -200,7 +200,7 @@ class ContextProvider:
 
         return pinned_apps
 
-    def get_screenshot(self, window_title: str = None):
+    def get_screenshot(self, window_title: str | None = None):
         """
         Captures only the active window region.
         Falls back to full screenshot if window bounds can't be determined.
