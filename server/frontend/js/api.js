@@ -36,18 +36,23 @@ export async function getSettings() {
  * @param {object} data
  * @returns {Promise<{success: boolean, detail: string}>}
  */
-export async function postSettings(data) {
-  const res = await fetch(`${API_BASE}/settings/`, {
+export async function postSettings(data, params = {}) {
+  const queryString = new URLSearchParams(params).toString();
+  const url = `/settings/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'settings-json': JSON.stringify(data),
+      'Content-Type': 'application/json'
     },
+    body: JSON.stringify(data)
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail ?? `HTTP ${res.status}`);
+
+  if (!response.ok) {
+    throw new Error(`Server error: ${response.statusText}`);
   }
-  return res.json();
+
+  return await response.json();
 }
 
 // ── Run (WebSocket) ───────────────────────────────────────────────────────────

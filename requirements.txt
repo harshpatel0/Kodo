@@ -7,3 +7,6 @@ pywin32
 rootutils
 keyboard
 fastapi[standard]
+opencv-python
+numpy
+mss
