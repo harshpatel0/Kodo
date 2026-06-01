@@ -309,7 +309,12 @@ class AutonomyOrchestrator:
         actor_skills, installed_skills = self.skill_installation_mode.run(self.task)
 
         self.skills = actor_skills
-        self.installed_skills = installed_skills
+        if isinstance(installed_skills, (list, tuple, set)):
+            self.installed_skills = list(installed_skills)
+        elif installed_skills is None:
+            self.installed_skills = []
+        else:
+            self.installed_skills = [installed_skills]
 
     def run(self):
         while not self.hard_exit:
