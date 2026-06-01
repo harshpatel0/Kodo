@@ -18,6 +18,15 @@ class Skills:
 
     _skills = {}
 
+    def install_skill_defined_dependencies(self, skill):
+        skill_metadata = self._skills[skill]
+        packages = skill_metadata["dependencies"]
+
+        if packages == []:
+            return None
+        else:
+            self._runner._install_packages(packages=packages)
+
     def get_skill_doc(self, skill, consumer):
         """Gets the skill document for either `consumer`: planner | actor"""
 
@@ -58,6 +67,7 @@ class Skills:
         self.loaded_skills = []
         for skill in skills:
             logger.info(f"Installing Skill {skill} for {consumer}")
+            self.install_skill_defined_dependencies(skill=skill)
             skill_content = self.get_skill_doc(skill, consumer)
 
             if skill_content is None:
@@ -99,6 +109,7 @@ class Skills:
                 ),
                 "dynamic_context": False,
                 "entry": None,
+                "dependencies": [],
             }
 
             if os.path.exists(skill_json):
@@ -134,6 +145,7 @@ class Skills:
                         skill_entry["actions"] = definition.get("actions", [])
                         skill_entry["description"] = definition.get("description")
                         skill_entry["entry"] = entry
+                        skill_entry["dependencies"] = definition.get("dependencies", [])
 
                         for action in definition.get("actions", []):
                             self._dispatch[action] = entry
