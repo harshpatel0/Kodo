@@ -2,23 +2,43 @@ import sys
 import json
 import os
 import glob
+import subprocess
 
 
-def get_launchable_apps():
-    paths = [
-        os.path.join(
-            os.environ["ProgramData"], "Microsoft", "Windows", "Start Menu", "Programs"
-        ),
-        os.path.join(
-            os.environ["AppData"], "Microsoft", "Windows", "Start Menu", "Programs"
-        ),
-    ]
-
+def get_all_windows_apps():
     app_map = {}
-    for path in paths:
-        for file in glob.glob(path + "/**/*.lnk", recursive=True):
-            name = os.path.basename(file).replace(".lnk", "").lower()
-            app_map[name] = file
+
+    ps_command = (
+        "Get-StartApps | ForEach-Object { "
+        'if ($_.AppId) { echo "$($_.Name)||$($_.AppId)" } '
+        "}"
+    )
+
+    try:
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+        result = subprocess.run(
+            ["powershell", "-Command", ps_command],
+            capture_output=True,
+            text=True,
+            check=True,
+            startupinfo=startupinfo,
+        )
+
+        for line in result.stdout.splitlines():
+            if "||" in line:
+                friendly_name, app_id = line.split("||", 1)
+                clean_name = friendly_name.strip().lower()
+
+                # If it's already a standard path or GUID, handle it,
+                # otherwise prefix it so os.startfile knows how to open it
+                if ":" in app_id or app_id.startswith("{"):
+                    app_map[clean_name] = app_id
+                else:
+                    app_map[clean_name] = f"shell:AppsFolder\\{app_id}"
+    except Exception:
+        pass
 
     return app_map
 
@@ -26,7 +46,7 @@ def get_launchable_apps():
 def open_app(app_name):
     if not app_name:
         print("Error: No app name.", file=sys.stderr)
-    app_map = get_launchable_apps()
+    app_map = get_all_windows_apps()
     target = next(
         (path for name, path in app_map.items() if name.lower() == app_name.lower()),
         None,
@@ -40,11 +60,11 @@ def open_app(app_name):
 
 
 def get_list_of_installed_apps():
-    return get_launchable_apps().keys()
+    return get_all_windows_apps().keys()
 
 
 def generate_context():
-    app_map = get_launchable_apps()
+    app_map = get_all_windows_apps()
     apps = list(app_map.keys())
     apps_str = ", ".join(apps)
 
