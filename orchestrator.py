@@ -435,13 +435,34 @@ Output of Iteration: {self.iterations}
                 self.runtime_skills = None
 
 
+def run_externally(task: str, mode_override: str | None = None):
+    is_using_autonomy_mode = settings.orchestrator.use_experimental_autonomy_mode
+
+    if mode_override:
+        if mode_override == "planner-actor":
+            is_using_autonomy_mode = False
+        elif mode_override == "autonomy":
+            is_using_autonomy_mode = True
+
+    if is_using_autonomy_mode:
+        autonomy_orchestrator = AutonomyOrchestrator(task=task)
+        autonomy_orchestrator.run_skill_installation_mode()
+        autonomy_orchestrator.run()
+    else:
+        plan = models.planner_model.make_plan(task=task)
+
+        step_orchestrator = StepOrchestrator(
+            steps=plan, skills=plan.get("_actor_skills")
+        )
+
+        step_orchestrator.run()
+
+
 if __name__ == "__main__":
     task = "Display a Windows Toast Notification saying Hello World"
 
     if not settings.orchestrator.use_experimental_autonomy_mode:
         plan = models.planner_model.make_plan(task)
-        printed_plan = json.dumps(plan, indent=2)
-        print(printed_plan)
 
         step_orchestrator = StepOrchestrator(
             steps=plan, skills=plan.get("_actor_skills")

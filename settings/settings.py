@@ -12,6 +12,9 @@ class Settings:
         self.data = self._load_settings_from_file()
         self._parse_settings(self, self.data)
 
+    def load_custom_settings(self, data: dict) -> None:
+        self._parse_settings(self, data=data)
+
     def _load_settings_from_file(self) -> dict:
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:

@@ -6,3 +6,4 @@ pywinauto
 pywin32
 rootutils
 keyboard
+fastapi[standard]
