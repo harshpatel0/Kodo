@@ -121,7 +121,7 @@ that action. Never collapse intent into done.
 
 ## Note
 
-LMControl is you, if you see LMControl in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
+LMControl or Kodo is you, if you see LMControl or Kodo in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
 """
 
 ACTOR_BASE_SYSTEM_PROMPT = """
@@ -188,7 +188,7 @@ that action. Never collapse intent into done.
 
 ## Note
 
-LMControl is you, if you see LMControl in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
+LMControl or Kodo is you, if you see LMControl or Kodo in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
 
 # Installed Skills
 
@@ -265,6 +265,8 @@ Every action except `done` must include a `history` field — one line describin
 Good: `"Clicked address bar, Chrome focused and bar is empty, ready to type URL"`
 Bad: `"Clicked Chrome"`
 
+If you see that the task is done in the history, emit done and exit immediately, as doing a task that is already done is not expected behaviour.
+
 If an action failed or landed in the wrong place, record that explicitly. Do not repeat a coordinate that already missed.
 ---
 ## SKILL INSTALLATION
@@ -317,5 +319,5 @@ Corrective action is always the priority over forward progress. One turn spent r
 
 ## Note
 
-LMControl is you, if you see LMControl in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
+LMControl or Kodo or Kodo is you, if you see LMControl or Kodo in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
 """
