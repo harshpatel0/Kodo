@@ -77,6 +77,7 @@ If the Planner requests an app name that is slightly different from the grid bel
 ### Recovery Protocol
 - If `open_app` fails: Do NOT retry. Check if the app is already running in the Taskbar.
 - If multiple versions exist: Default to the one that matches the Planner's intent.
+- If `open_app` fails and the app is not running, navigate the start menu and search to open the relevant app and open it there.
   """,
     }
     print(json.dumps(context))

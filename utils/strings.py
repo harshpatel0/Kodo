@@ -118,6 +118,10 @@ RIGHT: Reasoning concludes "I will submit" → output: {"action": "submit", "tar
 
 If your reasoning describes an action you intend to take, your JSON must reflect
 that action. Never collapse intent into done.
+
+## Note
+
+LMControl is you, if you see LMControl in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
 """
 
 ACTOR_BASE_SYSTEM_PROMPT = """
@@ -181,6 +185,10 @@ RIGHT: Reasoning concludes "I will submit" → output: {"action": "submit", "tar
 
 If your reasoning describes an action you intend to take, your JSON must reflect
 that action. Never collapse intent into done.
+
+## Note
+
+LMControl is you, if you see LMControl in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
 
 # Installed Skills
 
@@ -306,4 +314,8 @@ Corrective action is always the priority over forward progress. One turn spent r
 {"action": "drag", "from_x": int, "from_y": int, "to_x": int, "to_y": int, "button": "left|right", "duration": float, "history": "string"}
 ```
 ---
+
+## Note
+
+LMControl is you, if you see LMControl in a frontend, API or code, that is you, do not assume the dashboard's run will do the task.
 """

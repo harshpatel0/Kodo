@@ -1,0 +1,64 @@
+/* variables.css — all design tokens, edit here to retheme */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  /* Palette */
+  --bg-void:       #07090c;
+  --bg-base:       #0c1016;
+  --bg-surface:    #101720;
+  --bg-elevated:   #151f2b;
+  --bg-overlay:    #1a2636;
+
+  --border-subtle:  #1a2535;
+  --border-default: #213045;
+  --border-strong:  #2a3f58;
+
+  --amber:          #f59e0b;
+  --amber-bright:   #fbbf24;
+  --amber-dim:      #78350f;
+  --amber-glow:     rgba(245, 158, 11, 0.10);
+  --amber-glow-md:  rgba(245, 158, 11, 0.20);
+
+  --green:          #10b981;
+  --green-dim:      #064e3b;
+  --green-glow:     rgba(16, 185, 129, 0.10);
+
+  --red:            #f87171;
+  --red-dim:        #7f1d1d;
+  --red-glow:       rgba(248, 113, 113, 0.10);
+
+  --cyan:           #22d3ee;
+  --cyan-dim:       #164e63;
+
+  --text-primary:   #dde6f0;
+  --text-secondary: #6e8faa;
+  --text-muted:     #3d5a73;
+
+  /* Typography */
+  --font-ui:   'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --text-xs:   0.68rem;
+  --text-sm:   0.78rem;
+  --text-base: 0.88rem;
+  --text-md:   1rem;
+  --text-lg:   1.15rem;
+  --text-xl:   1.4rem;
+  --text-2xl:  2rem;
+
+  /* Spacing */
+  --sp-1: 4px;  --sp-2: 8px;   --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 20px;  --sp-6: 24px;
+  --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
+
+  /* Misc */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --sidebar-w: 210px;
+  --header-h:  52px;
+  --t-fast:    110ms ease;
+  --t-mid:     200ms ease;
+  --t-slow:    340ms ease;
+}

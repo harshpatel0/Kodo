@@ -36,8 +36,12 @@ class LogStream:
         self.loop = loop
         self.queue: asyncio.Queue = asyncio.Queue()
         self._handler = _QueueLogHandler(self)
-        self._stdout_proxy = _StdoutProxy(self)
+
+        # 1. Define this line first:
         self._original_stdout = sys.stdout
+
+        # 2. Then initialize the proxy:
+        self._stdout_proxy = _StdoutProxy(self)
 
     # ── Public API ────────────────────────────────────────────────────────────
 

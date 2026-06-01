@@ -1,3 +1,5 @@
+BIND_TO_ALL = True
+
 from log_stream import LogStream
 import asyncio
 import rootutils
@@ -15,6 +17,9 @@ from fastapi import (
     WebSocketException,
 )
 from fastapi import status as ws_status
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 
 from orchestrator import run_externally
 from settings.settings import settings
@@ -23,10 +28,18 @@ from typing import Annotated
 
 app = FastAPI()
 
+from pathlib import Path
+
+from pathlib import Path
+
+FRONTEND_DIR = Path(__file__).parent / "frontend"  # server/frontend
+
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
 
 @app.get("/")
-def health():
-    return {"status": "API Running"}
+def serve_app():
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 @app.get("/settings/")
@@ -109,4 +122,9 @@ def _run_with_stream(task, mode_override, stream):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
+    if BIND_TO_ALL:
+        host = "0.0.0.0"
+    else:
+        host = "127.0.0.1"
+
+    uvicorn.run("api:app", host=host, port=8000, reload=True)

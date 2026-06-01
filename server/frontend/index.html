@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LMControl</title>
+
+  <link rel="stylesheet" href="/static/css/variables.css" />
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/layout.css" />
+  <link rel="stylesheet" href="/static/css/components.css" />
+  <link rel="stylesheet" href="/static/css/animations.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     OFFLINE BANNER (shown when API unreachable)
+════════════════════════════════════════════════ -->
+<div id="offline-banner">
+  <div class="offline-icon">
+    <svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18.364 5.636a9 9 0 0 1 0 12.728M5.636 5.636a9 9 0 0 0 0 12.728"/>
+      <path d="M15.536 8.464a5 5 0 0 1 0 7.072M8.464 8.464a5 5 0 0 0 0 7.072"/>
+      <line x1="12" y1="12" x2="12" y2="12.01"/>
+      <line x1="2" y1="2" x2="22" y2="22"/>
+    </svg>
+  </div>
+  <div class="offline-title">API Not Running</div>
+  <div class="offline-subtitle">
+    LMControl's backend API is unreachable. Make sure the server is running,
+    then click Retry to reconnect.
+  </div>
+  <div class="offline-url" id="offline-api-url"></div>
+  <div class="offline-actions">
+    <button id="offline-retry-btn" class="btn btn-primary">Retry</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     APP SHELL
+════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- ── Sidebar ── -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <!-- Simple "L" monogram -->
+        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="2" width="3" height="10"/>
+          <rect x="3" y="10" width="8" height="2.5"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">LM<span>Control</span></div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Navigation</div>
+
+      <div class="nav-item active" data-page="run">
+        <svg class="nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="3,2 13,8 3,14"/>
+        </svg>
+        Run Task
+      </div>
+
+      <div class="nav-item" data-page="settings">
+        <svg class="nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="2.5"/>
+          <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/>
+        </svg>
+        Settings
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="api-status-row">
+        <div class="status-dot checking" id="sidebar-status-dot"></div>
+        <span id="sidebar-status-label">Checking…</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div id="main">
+
+    <!-- Page header -->
+    <header class="page-header">
+      <div>
+        <div class="page-title" id="page-header-title">Run Task</div>
+        <div class="page-subtitle" id="page-header-subtitle">Execute a task using the LMControl orchestrator</div>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <div class="page-content">
+
+      <!-- ══════════════════════════════════════
+           PAGE: RUN
+      ═══════════════════════════════════════ -->
+      <div id="page-run" class="page active">
+
+        <div class="two-col">
+          <!-- Left: Task config -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Task</div>
+                <div class="card-desc">Describe what you want LMControl to do.</div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: var(--sp-4);">
+              <label for="run-task-input">Task Description <span class="label-hint">Ctrl+Enter to run</span></label>
+              <textarea
+                id="run-task-input"
+                placeholder="e.g. Open Notepad and type Hello World, then save the file."
+                style="min-height: 120px;"
+              ></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: var(--sp-5);">
+              <label for="run-mode-select">Mode Override</label>
+              <select id="run-mode-select">
+                <option value="default">Default (use settings)</option>
+                <option value="planner">Planner</option>
+                <option value="autonomy">Autonomy</option>
+              </select>
+            </div>
+
+            <div style="display: flex; gap: var(--sp-3); align-items: center;">
+              <button id="run-start-btn" class="btn btn-primary">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                  <polygon points="2,1 10,6 2,11"/>
+                </svg>
+                Run
+              </button>
+              <button id="run-stop-btn" class="btn btn-danger" style="display: none;">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                  <rect x="2" y="2" width="8" height="8" rx="1"/>
+                </svg>
+                Stop
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: Status -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Status</div>
+            </div>
+
+            <!-- Run status bar (hidden when idle) -->
+            <div id="run-status-bar" class="run-status-bar" style="display: none;">
+              <div id="run-spinner" class="run-spinner"></div>
+              <div id="run-status-dot" class="status-dot checking"></div>
+              <span id="run-status-text" class="text-sm">Running…</span>
+            </div>
+
+            <div style="margin-top: var(--sp-4); color: var(--text-muted); font-size: var(--text-sm);" id="run-idle-hint">
+              Start a run to see live status here.
+            </div>
+          </div>
+        </div>
+
+        <!-- Log viewer (full width) -->
+        <div id="log-viewer">
+          <div class="log-toolbar">
+            <div class="log-toolbar-left">
+              <span class="text-sm" style="font-weight: 700; color: var(--text-secondary);">Output</span>
+              <div class="log-filters">
+                <button class="log-filter-btn" data-level="DEBUG" title="Toggle DEBUG">DBG</button>
+                <button class="log-filter-btn" data-level="INFO"  title="Toggle INFO">INF</button>
+                <button class="log-filter-btn" data-level="WARNING" title="Toggle WARNING">WRN</button>
+                <button class="log-filter-btn" data-level="ERROR" title="Toggle ERROR">ERR</button>
+              </div>
+            </div>
+            <div style="display: flex; gap: var(--sp-2);">
+              <button id="log-autoscroll-btn" class="btn btn-ghost btn-sm active" title="Auto-scroll ON">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                  <line x1="2" y1="3" x2="10" y2="3"/>
+                  <line x1="2" y1="6" x2="10" y2="6"/>
+                  <polyline points="6,8 9,11 6,11"/>
+                  <line x1="9" y1="11" x2="9" y2="7"/>
+                </svg>
+                Scroll
+              </button>
+              <button id="log-clear-btn" class="btn btn-ghost btn-sm">Clear</button>
+            </div>
+          </div>
+          <div class="log-body" id="log-body">
+            <div class="log-empty">No log output yet…</div>
+          </div>
+        </div>
+
+      </div><!-- /page-run -->
+
+
+      <!-- ══════════════════════════════════════
+           PAGE: SETTINGS
+      ═══════════════════════════════════════ -->
+      <div id="page-settings" class="page">
+
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-4);">
+          <div style="display: flex; align-items: center; gap: var(--sp-4);">
+            <button id="settings-load-btn" class="btn btn-secondary">Reload</button>
+            <button id="settings-save-btn" class="btn btn-primary">Save Settings</button>
+          </div>
+          <label style="display: flex; align-items: center; gap: var(--sp-3); cursor: pointer; font-size: var(--text-sm); color: var(--text-secondary);">
+            <div class="toggle" style="margin-left: 0;">
+              <input type="checkbox" id="settings-raw-toggle" />
+              <div class="toggle-track"></div>
+            </div>
+            Edit raw JSON
+          </label>
+        </div>
+
+        <!-- Raw JSON editor (hidden by default) -->
+        <div id="settings-raw-area" style="display: none;">
+          <textarea
+            id="settings-raw-area"
+            style="min-height: 480px; font-family: var(--font-mono); font-size: var(--text-sm);"
+            placeholder="Settings JSON will appear here…"
+            spellcheck="false"
+          ></textarea>
+        </div>
+
+        <!-- Form UI -->
+        <div id="settings-form-area">
+
+          <!-- ── Ollama Server ── -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Ollama Server</div>
+            </div>
+            <div class="form-group">
+              <label for="cfg-ollama-server">Server Address <span class="label-hint">host:port</span></label>
+              <input type="text" id="cfg-ollama-server" placeholder="192.168.68.254:11434" />
+            </div>
+          </div>
+
+          <!-- ── Models ── -->
+          <div class="section-title">Model Configuration</div>
+
+          <!-- Skill Installation -->
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-card-icon">
+                <svg viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="12" height="12" rx="2"/>
+                  <line x1="8" y1="5" x2="8" y2="11"/>
+                  <line x1="5" y1="8" x2="11" y2="8"/>
+                </svg>
+              </div>
+              <div>
+                <div class="model-card-title">Skill Installation</div>
+                <div class="model-card-subtitle">Used when installing skills before a run</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-skill-model">Model Name</label>
+                <input type="text" id="cfg-skill-model" placeholder="gemma4:e4b" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-skill-temp">Temperature</label>
+                <input type="number" id="cfg-skill-temp" min="0" max="2" step="0.05" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-skill-keepalive">Keep Alive <span class="label-hint">seconds</span></label>
+                <input type="number" id="cfg-skill-keepalive" min="0" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Planner -->
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-card-icon">
+                <svg viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="12" height="3" rx="1"/>
+                  <rect x="2" y="7" width="8"  height="2" rx="1"/>
+                  <rect x="2" y="11" width="10" height="2" rx="1"/>
+                </svg>
+              </div>
+              <div>
+                <div class="model-card-title">Planner</div>
+                <div class="model-card-subtitle">Breaks tasks into steps</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-planner-model">Model Name</label>
+                <input type="text" id="cfg-planner-model" placeholder="gemma4:e4b" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-planner-temp">Temperature</label>
+                <input type="number" id="cfg-planner-temp" min="0" max="2" step="0.05" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-planner-keepalive">Keep Alive <span class="label-hint">seconds</span></label>
+                <input type="number" id="cfg-planner-keepalive" min="0" />
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Thinking Mode</div>
+                <div class="toggle-hint">Enable extended thinking for the planner</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-planner-thinking" />
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Actor -->
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-card-icon">
+                <svg viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="8" cy="5" r="3"/>
+                  <path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/>
+                </svg>
+              </div>
+              <div>
+                <div class="model-card-title">Actor</div>
+                <div class="model-card-subtitle">Executes individual steps</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-actor-model">Model Name</label>
+                <input type="text" id="cfg-actor-model" placeholder="gemma4:e4b" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-actor-temp">Temperature</label>
+                <input type="number" id="cfg-actor-temp" min="0" max="2" step="0.05" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-actor-keepalive">Keep Alive <span class="label-hint">seconds</span></label>
+                <input type="number" id="cfg-actor-keepalive" min="0" />
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Thinking Mode</div>
+                <div class="toggle-hint">Enable extended thinking for the actor</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-actor-thinking" />
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Attach Window Screenshot</div>
+                <div class="toggle-hint">Send a screenshot of the active window with each step</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-actor-screenshot" />
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Autonomy Actor -->
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-card-icon">
+                <svg viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 2a6 6 0 1 0 6 6"/>
+                  <path d="M11 2h3v3"/>
+                  <circle cx="8" cy="8" r="2"/>
+                </svg>
+              </div>
+              <div>
+                <div class="model-card-title">Autonomy Actor</div>
+                <div class="model-card-subtitle">Used in experimental autonomy mode</div>
+                <span class="badge badge-amber" style="margin-top: var(--sp-1);">Experimental</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-auto-model">Model Name</label>
+                <input type="text" id="cfg-auto-model" placeholder="gemma4:e4b" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-auto-temp">Temperature</label>
+                <input type="number" id="cfg-auto-temp" min="0" max="2" step="0.05" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-auto-keepalive">Keep Alive <span class="label-hint">seconds</span></label>
+                <input type="number" id="cfg-auto-keepalive" min="0" />
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Thinking Mode</div>
+                <div class="toggle-hint">Enable extended thinking for the autonomy actor</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-auto-thinking" />
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Attach Window Screenshot</div>
+                <div class="toggle-hint">Send a screenshot of the active window</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-auto-screenshot" />
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- ── Orchestrator ── -->
+          <div class="section-title">Orchestrator</div>
+
+          <div class="card">
+            <div class="form-row" style="margin-bottom: var(--sp-4);">
+              <div class="form-group">
+                <label for="cfg-settle-time">Action Settle Time <span class="label-hint">seconds</span></label>
+                <input type="number" id="cfg-settle-time" min="0" step="0.5" />
+              </div>
+            </div>
+
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Experimental Autonomy Mode</div>
+                <div class="toggle-hint">Use the AutonomyOrchestrator instead of StepOrchestrator</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-use-autonomy" />
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Planner Architecture -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Planner Architecture</div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-max-iter-per-step">Max Iterations per Step</label>
+                <input type="number" id="cfg-max-iter-per-step" min="1" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-max-autonomy-steps">Max Autonomy Steps</label>
+                <input type="number" id="cfg-max-autonomy-steps" min="1" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-max-replan-loop">Max Replan Loop</label>
+                <input type="number" id="cfg-max-replan-loop" min="1" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Autonomy Orchestrator -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Autonomy Orchestrator</div>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Enforce Max Total Iterations</div>
+                <div class="toggle-hint">Hard-stop the autonomy loop at the limit below</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-enforce-max-iter" />
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="form-group" style="margin-top: var(--sp-4);">
+              <label for="cfg-max-total-iter">Max Total Iterations <span class="label-hint">0 = unlimited</span></label>
+              <input type="number" id="cfg-max-total-iter" min="0" />
+            </div>
+          </div>
+
+          <!-- ── Context Provider ── -->
+          <div class="section-title">Context Provider</div>
+
+          <div class="card">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-ctx-waiting">Waiting Period <span class="label-hint">seconds</span></label>
+                <input type="number" id="cfg-ctx-waiting" min="0" step="0.5" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-ctx-skip-ticks">Skip After Ticks</label>
+                <input type="number" id="cfg-ctx-skip-ticks" min="0" />
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /settings-form-area -->
+
+      </div><!-- /page-settings -->
+
+    </div><!-- /page-content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script type="module" src="/static/main.js"></script>
+</body>
+</html>
