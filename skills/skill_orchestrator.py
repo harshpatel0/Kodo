@@ -11,172 +11,194 @@ VENV_PYTHON = os.path.join(PROJECT_ROOT, ".lmcontrol_venv", "Scripts", "python.e
 from python.run_python_code import PythonRunner
 from utils.logger import logger
 
+
 class Skills:
-  _dispatch = {}
-  _runner = PythonRunner()
+    _dispatch = {}
+    _runner = PythonRunner()
 
-  _skills = {}
+    _skills = {}
 
-  def get_skill_doc(self, skill, consumer):
-    """Gets the skill document for either `consumer`: planner | actor"""
+    def get_skill_doc(self, skill, consumer):
+        """Gets the skill document for either `consumer`: planner | actor"""
 
-    if not self.has_skill(skill):
-      logger.warning(f"Requested skill '{skill}' not found")
-      return None
-    
-    skill_metadata = self._skills[skill]
-    print(skill_metadata)
+        if not self.has_skill(skill):
+            logger.warning(f"Requested skill '{skill}' not found")
+            return None
 
-    consumer = consumer.lower()
-    filename = f"{consumer}_skill.md"
-    skill_path = skill_metadata["path"]
-    doc_path = os.path.join(skill_path, filename)
+        skill_metadata = self._skills[skill]
+        print(skill_metadata)
 
-    if skill_metadata['dynamic_context']:
-      skill_entry_point = skill_metadata['entry']
-      output = self._runner.run_skill_context_generator(skill_entry_point)
-      logger.debug(f"Output from generator for {skill}")
+        consumer = consumer.lower()
+        filename = f"{consumer}_skill.md"
+        skill_path = skill_metadata["path"]
+        doc_path = os.path.join(skill_path, filename)
 
-      output = json.loads(output)
-      skill_definition = output[consumer]
-      return skill_definition
+        if skill_metadata["dynamic_context"]:
+            skill_entry_point = skill_metadata["entry"]
+            output = self._runner.run_skill_context_generator(skill_entry_point)
+            logger.debug(f"Output from generator for {skill}")
 
-    if not os.path.exists(doc_path):
-      logger.warning(f"No {filename} found for skill '{skill}'")
-      return None
+            output = json.loads(output)
+            skill_definition = output[consumer]
+            return skill_definition
 
-    with open(doc_path, encoding='utf-8') as skill_file:
-      return skill_file.read()
+        if not os.path.exists(doc_path):
+            logger.warning(f"No {filename} found for skill '{skill}'")
+            return None
 
-  def load_all_requested_skills(self, skills, consumer):
-    """Loads all requested skills for a particular consumer"""
-    logger.debug(f"Attempting install of the following skills {skills} for consumer: {consumer}")
+        with open(doc_path, encoding="utf-8") as skill_file:
+            return skill_file.read()
 
-    self.loaded_skills = []
-    for skill in skills:
-      logger.info(f"Installing Skill {skill} for {consumer}")
-      skill_content = self.get_skill_doc(skill, consumer)
-      
-      if skill_content is None:
-          continue
-      
-      self.loaded_skills.append(f"## Skill: {skill}\n{skill_content}")
-    
-    logger.info(f"Loaded all skills: {skills} for {consumer}")
-    
-    skill_load_output = "\n\n".join(self.loaded_skills) if self.loaded_skills else None
-    logger.debug(f"Loaded Skills \n{skill_load_output}")
+    def load_all_requested_skills(self, skills, consumer):
+        """Loads all requested skills for a particular consumer"""
+        logger.debug(
+            f"Attempting install of the following skills {skills} for consumer: {consumer}"
+        )
 
-    return skill_load_output
+        self.loaded_skills = []
+        for skill in skills:
+            logger.info(f"Installing Skill {skill} for {consumer}")
+            skill_content = self.get_skill_doc(skill, consumer)
 
+            if skill_content is None:
+                continue
 
-  def _discover(self):
-    for skill_folder in os.listdir(SKILLS_DIR):
-      skill_path = os.path.join(SKILLS_DIR, skill_folder)
-      if skill_folder.startswith("__"): continue
+            self.loaded_skills.append(f"## Skill: {skill}\n{skill_content}")
 
-      if not os.path.isdir(skill_path):
-        continue
+        logger.info(f"Loaded all skills: {skills} for {consumer}")
 
-      skill_json = os.path.join(skill_path, "skill.json")
-      
-      skill_entry = {
-        "name": skill_folder,
-        "path": skill_path,
-        "executable": False,
-        "actions": [],
-        "description": None,
-        "has_planner_skill": os.path.exists(os.path.join(skill_path, "PLANNER_SKILL.md")),
-        "has_actor_skill": os.path.exists(os.path.join(skill_path, "ACTOR_SKILL.md")),
-        "dynamic_context": False,
-        "entry": None
-      }
+        skill_load_output = (
+            "\n\n".join(self.loaded_skills) if self.loaded_skills else None
+        )
+        logger.debug(f"Loaded Skills \n{skill_load_output}")
 
-      if os.path.exists(skill_json):
-        try:
-          with open(skill_json, encoding='utf-8') as f:
-            definition = json.load(f)
+        return skill_load_output
 
-          if not definition.get("enabled", True):
-            logger.debug(f"Skipping disabling skill: {skill_folder}")
-            continue
+    def _discover(self):
+        for skill_folder in os.listdir(SKILLS_DIR):
+            skill_path = os.path.join(SKILLS_DIR, skill_folder)
+            if skill_folder.startswith("__"):
+                continue
 
-          if definition.get("dynamic_context", False):
-            logger.debug(f"Found a skill that dynamically generates it's context: {skill_folder}")
-            skill_entry["dynamic_context"] = True
-            skill_entry["has_actor_skill"] = definition.get("generated_for_actor")
-            skill_entry["has_planner_skill"] = definition.get("generated_for_planner")
+            if not os.path.isdir(skill_path):
+                continue
 
-          if definition.get('entry', None):
-            entry = os.path.join(skill_path, definition["entry"])
+            skill_json = os.path.join(skill_path, "skill.json")
 
-          if not os.path.exists(entry):
-            logger.warning(f"Warning: entry '{entry}' not found for skill '{skill_folder}', skipping executable.")
-          else:
-            skill_entry["executable"] = True
-            skill_entry["actions"] = definition.get("actions", [])
-            skill_entry["description"] = definition.get("description")
-            skill_entry['entry'] = entry
+            skill_entry = {
+                "name": skill_folder,
+                "path": skill_path,
+                "executable": False,
+                "actions": [],
+                "description": None,
+                "has_planner_skill": os.path.exists(
+                    os.path.join(skill_path, "PLANNER_SKILL.md")
+                ),
+                "has_actor_skill": os.path.exists(
+                    os.path.join(skill_path, "ACTOR_SKILL.md")
+                ),
+                "dynamic_context": False,
+                "entry": None,
+            }
 
-            for action in definition.get("actions", []):
-              self._dispatch[action] = entry
-              logger.debug(f"Registered action '{action}' to {skill_folder}")
+            if os.path.exists(skill_json):
+                try:
+                    with open(skill_json, encoding="utf-8") as f:
+                        definition = json.load(f)
 
-        except Exception as e:
-          logger.error(f"Failed to load skill.json for '{skill_folder}': {e}")
+                    if not definition.get("enabled", True):
+                        logger.debug(f"Skipping disabling skill: {skill_folder}")
+                        continue
 
-      self._skills[skill_folder] = skill_entry
+                    if definition.get("dynamic_context", False):
+                        logger.debug(
+                            f"Found a skill that dynamically generates it's context: {skill_folder}"
+                        )
+                        skill_entry["dynamic_context"] = True
+                        skill_entry["has_actor_skill"] = definition.get(
+                            "generated_for_actor"
+                        )
+                        skill_entry["has_planner_skill"] = definition.get(
+                            "generated_for_planner"
+                        )
 
-  def get_available_skills(self):
-    """Returns skill metadata for all discovered skills. Used to inform the LLM."""
-    return list(self._skills.values())
+                    if definition.get("entry", None):
+                        entry = os.path.join(skill_path, definition["entry"])
 
-  def get_skills_summary(self):
-    """Returns a compact string summary suitable for injecting into a prompt."""
-    lines = []
-    for skill in self._skills.values():
-      status = []
-      if skill["executable"]:
-        status.append(f"actions: {', '.join(skill['actions'])}")
-      if skill["has_planner_skill"]:
-        status.append("planner guide")
-      if skill["has_actor_skill"]:
-        status.append("actor guide")
-      if skill["dynamic_context"]:
-        status.append("context dynamically generated")
-      desc = f" — {skill['description']}" if skill["description"] else ""
-      lines.append(f"- {skill['name']}{desc} [{', '.join(status)}]")
-    return "\n".join(lines)
+                    if not os.path.exists(entry):
+                        logger.warning(
+                            f"Warning: entry '{entry}' not found for skill '{skill_folder}', skipping executable."
+                        )
+                    else:
+                        skill_entry["executable"] = True
+                        skill_entry["actions"] = definition.get("actions", [])
+                        skill_entry["description"] = definition.get("description")
+                        skill_entry["entry"] = entry
 
-  def can_handle(self, action_name):
-    return action_name in self._dispatch
-  
-  def has_skill(self, skill_name):
-    return skill_name in self._skills
+                        for action in definition.get("actions", []):
+                            self._dispatch[action] = entry
+                            logger.debug(
+                                f"Registered action '{action}' to {skill_folder}"
+                            )
 
-  def execute(self, action):
-    action_name = action.get("action")
-    entry = self._dispatch.get(action_name)
-    
-    if not entry:
-      return f"[Skill Orchestrator] No skill registered for action '{action_name}'"
-    
-    # Pass everything except 'action' key as args
-    args = {k: v for k, v in action.items() if k != "action"}
-    
-    return self._runner.run_skill_by_path(entry, args)
+                except Exception as e:
+                    logger.error(f"Failed to load skill.json for '{skill_folder}': {e}")
 
-  def list_actions(self):
-    return list(self._dispatch.keys())
-  
-  def __init__(self):
-    self._discover()
+            self._skills[skill_folder] = skill_entry
+
+    def get_available_skills(self):
+        """Returns skill metadata for all discovered skills. Used to inform the LLM."""
+        return list(self._skills.values())
+
+    def get_skills_summary(self):
+        """Returns a compact string summary suitable for injecting into a prompt."""
+        lines = []
+        for skill in self._skills.values():
+            status = []
+            if skill["executable"]:
+                status.append(f"actions: {', '.join(skill['actions'])}")
+            if skill["has_planner_skill"]:
+                status.append("planner guide")
+            if skill["has_actor_skill"]:
+                status.append("actor guide")
+            if skill["dynamic_context"]:
+                status.append("context dynamically generated")
+            desc = f" — {skill['description']}" if skill["description"] else ""
+            lines.append(f"- {skill['name']}{desc} [{', '.join(status)}]")
+        return "\n".join(lines)
+
+    def can_handle(self, action_name):
+        return action_name in self._dispatch
+
+    def has_skill(self, skill_name):
+        return skill_name in self._skills
+
+    def execute(self, action):
+        action_name = action.get("action")
+        entry = self._dispatch.get(action_name)
+
+        if not entry:
+            return (
+                f"[Skill Orchestrator] No skill registered for action '{action_name}'"
+            )
+
+        # Pass everything except 'action' key as args
+        args = {k: v for k, v in action.items() if k != "action"}
+
+        return self._runner.run_skill_by_path(entry, args)
+
+    def list_actions(self):
+        return list(self._dispatch.keys())
+
+    def __init__(self):
+        self._discover()
+
 
 if __name__ == "__main__":
-  skills = Skills()
-  print(skills.list_actions())
-  print(skills.get_skills_summary())
-  print(skills.get_available_skills())
-  print(skills.can_handle('open_url'))
-  print(skills.load_all_requested_skills(["launch-windows-app"], 'planner'))
-  print(skills.load_all_requested_skills(["launch-windows-app"], 'actor'))
+    skills = Skills()
+    print(skills.list_actions())
+    print(skills.get_skills_summary())
+    print(skills.get_available_skills())
+    print(skills.can_handle("open_url"))
+    print(skills.load_all_requested_skills(["launch-windows-app"], "planner"))
+    print(skills.load_all_requested_skills(["launch-windows-app"], "actor"))

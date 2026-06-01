@@ -7,90 +7,94 @@ skill_orchestrator = skills.skill_orchestrator.Skills()
 pc = PCActions(failsafe=True)
 
 import python.run_python_code
+
 pyrun = python.run_python_code.PythonRunner()
 
+
 def parse_action(action):
-  return_command = "PROCEED"
+    return_command = "PROCEED"
 
-  if skill_orchestrator.can_handle(action.get("action")):
-    result = skill_orchestrator.execute(action)
-    logger.debug(f"[SkillOrchestrator] {result}")
-    return result
-  
-  # The rest of PC Actions
-  match action["action"]:
-    case "click":
-      logger.debug(f"Clicking at X={action['x']}, Y={action['y']} on element={action.get('element')}")
+    if skill_orchestrator.can_handle(action.get("action")):
+        result = skill_orchestrator.execute(action)
+        logger.debug(f"[SkillOrchestrator] {result}")
+        return result
 
-      try:
-        pc.click(
-          position_x=int(action["x"]),
-          position_y=int(action["y"]),
-          button=action.get("button", "left")
-        )
-      except KeyError:
-        return_command = "RETRY"
+    # The rest of PC Actions
+    match action["action"]:
+        case "click":
+            logger.debug(
+                f"Clicking at X={action['x']}, Y={action['y']} on element={action.get('element')}"
+            )
 
-    case "type":
-      pc.type_text(action["text"], action.get("x"), action.get("y"))
+            try:
+                pc.click(
+                    position_x=int(action["x"]),
+                    position_y=int(action["y"]),
+                    button=action.get("button", "left"),
+                )
+            except KeyError:
+                return_command = "RETRY"
 
-    case "submit":
-      pc.type_text(action["text"], action.get("x"), action.get("y"))
-      pc.press_key('enter')
+        case "type":
+            pc.type_text(action["text"], action.get("x"), action.get("y"))
 
-    case "press_key":
-      pc.press_key(action["key"])
+        case "submit":
+            pc.type_text(action["text"], action.get("x"), action.get("y"))
+            pc.press_key("enter")
 
-    case "press_hotkey":
-      pc.press_hotkey(action["keys"])
+        case "press_key":
+            pc.press_key(action["key"])
 
-    case "drag":
-      pc.drag(
-        from_x=int(action["from_x"]),
-        from_y=int(action["from_y"]),
-        to_x=int(action["to_x"]),
-        to_y=int(action["to_y"]),
-        button=action.get("button", "left"),
-        duration=action.get("duration", 0.5)
-      )
+        case "press_hotkey":
+            pc.press_hotkey(action["keys"])
 
-    case "scroll_v":
-      pc.vscroll(
-        scroll_amount=action["amount"],
-        position_x=action["x"],
-        position_y=action["y"]
-      )
+        case "drag":
+            pc.drag(
+                from_x=int(action["from_x"]),
+                from_y=int(action["from_y"]),
+                to_x=int(action["to_x"]),
+                to_y=int(action["to_y"]),
+                button=action.get("button", "left"),
+                duration=action.get("duration", 0.5),
+            )
 
-    case "scroll_h":
-      pc.hscroll(
-        scroll_amount=action["amount"],
-        position_x=action["x"],
-        position_y=action["y"]
-      )
-    
-    case "clear_field":
-      pc.click(action.get('x'), action.get("y"))
-      pc.press_hotkey(['ctrl', 'a'])
-      pc.press_key('backspace')
-    
-    case "python":
-      result = pyrun.run(action['code'])
-      return result
+        case "scroll_v":
+            pc.vscroll(
+                scroll_amount=action["amount"],
+                position_x=action["x"],
+                position_y=action["y"],
+            )
 
-    case "done":
-      return_command = "DONE"
+        case "scroll_h":
+            pc.hscroll(
+                scroll_amount=action["amount"],
+                position_x=action["x"],
+                position_y=action["y"],
+            )
 
-    case "stuck":
-      return_command = "STUCK"
+        case "clear_field":
+            pc.click(action.get("x"), action.get("y"))
+            pc.press_hotkey(["ctrl", "a"])
+            pc.press_key("backspace")
 
-    case "retry":
-      return_command = "RETRY"
-    
-    case "replan":
-      return_command = "REPLAN"
+        case "python":
+            result = pyrun.run(action["code"])
+            return result
 
-    case _:
-      logger.warning(f"Unknown action: {action['action']}")
-      return_command = "RETRY"
+        case "done":
+            return_command = "DONE"
 
-  return return_command
+        case "stuck":
+            return_command = "STUCK"
+
+        case "retry":
+            return_command = "RETRY"
+
+        case "replan":
+            return_command = "REPLAN"
+
+        case _:
+            logger.warning(f"Unknown action: {action['action']}")
+            return_command = "RETRY"
+
+    return return_command

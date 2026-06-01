@@ -12,3 +12,4 @@ modules/
 lmcontrol.log
 
 settings.json
+venv/

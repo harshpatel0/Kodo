@@ -1,4 +1,5 @@
 import rootutils
+
 root = rootutils.setup_root(__file__, pythonpath=True)
 
 import json
@@ -15,26 +16,28 @@ skill_installation = SkillInstallationMode()
 context = ContextProvider()
 context.get_installed_apps()
 
+
 def make_plan(task: str):
-  planner_skills, actor_skills = skill_installation.run(task)
+    planner_skills, actor_skills = skill_installation.run(task)
 
-  logger.debug(f"Planner skills loaded: {planner_skills is not None}")
-  logger.debug(f"Actor skills loaded: {actor_skills is not None}")
+    logger.debug(f"Planner skills loaded: {planner_skills is not None}")
+    logger.debug(f"Actor skills loaded: {actor_skills is not None}")
 
-  response = planner_model.run(task=task, skills=planner_skills)
-  logger.info(response)
+    response = planner_model.run(task=task, skills=planner_skills)
+    logger.info(response)
 
-  response = utils.strip_markdown_json(response)
-  plan = json.loads(response)
+    response = utils.strip_markdown_json(response)
+    plan = json.loads(response)
 
-  # Carry actor skills forward for the orchestrator
-  plan["_actor_skills"] = actor_skills
+    # Carry actor skills forward for the orchestrator
+    plan["_actor_skills"] = actor_skills
 
-  return plan
+    return plan
+
 
 if __name__ == "__main__":
-  plan = make_plan("Open a Taarak Metha ka Ooltah Chasmah Video on YouTube")
-  
-  # Don't print _actor_skills in the human-readable output
-  display_plan = {k: v for k, v in plan.items() if k != "_actor_skills"}
-  print(json.dumps(display_plan, indent=2))
+    plan = make_plan("Open a Taarak Metha ka Ooltah Chasmah Video on YouTube")
+
+    # Don't print _actor_skills in the human-readable output
+    display_plan = {k: v for k, v in plan.items() if k != "_actor_skills"}
+    print(json.dumps(display_plan, indent=2))

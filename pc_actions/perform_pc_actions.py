@@ -2,63 +2,67 @@ import pyautogui
 import time
 from utils.logger import logger
 
+
 class PCActions:
-  def __init__(self, failsafe=True):
-    pyautogui.FAILSAFE = failsafe
+    def __init__(self, failsafe=True):
+        pyautogui.FAILSAFE = failsafe
 
-  def click(self, position_x, position_y, button='left'):
-    pyautogui.click(button=button, x=position_x, y=position_y)
+    def click(self, position_x, position_y, button="left"):
+        pyautogui.click(button=button, x=position_x, y=position_y)
 
-  def vscroll(self, scroll_amount, position_x, position_y):
-    pyautogui.scroll(clicks=scroll_amount, x=position_x, y=position_y)
+    def vscroll(self, scroll_amount, position_x, position_y):
+        pyautogui.scroll(clicks=scroll_amount, x=position_x, y=position_y)
 
-  def hscroll(self, scroll_amount, position_x, position_y):
-    pyautogui.hscroll(clicks=scroll_amount, x=position_x, y=position_y)
+    def hscroll(self, scroll_amount, position_x, position_y):
+        pyautogui.hscroll(clicks=scroll_amount, x=position_x, y=position_y)
 
-  def type_text(self, text, position_x, position_y, interval=0.01):
-    if position_x != None or position_y != None:
-      self.click(button='left', position_x=position_x, position_y=position_y)
+    def type_text(self, text, position_x, position_y, interval=0.01):
+        if position_x != None or position_y != None:
+            self.click(button="left", position_x=position_x, position_y=position_y)
 
-    time.sleep(interval * 5)
-    pyautogui.write(text, interval=interval)
+        time.sleep(interval * 5)
+        pyautogui.write(text, interval=interval)
 
-  def press_key(self, key):
-    pyautogui.press(keys=key)
+    def press_key(self, key):
+        pyautogui.press(keys=key)
 
-  def drag(self, from_x, from_y, to_x, to_y, duration=0.5, steps=100):
+    def drag(self, from_x, from_y, to_x, to_y, duration=0.5, steps=100):
 
-    pyautogui.moveTo(from_x, from_y)
-    pyautogui.mouseDown()
+        pyautogui.moveTo(from_x, from_y)
+        pyautogui.mouseDown()
 
-    start_time = time.time()
+        start_time = time.time()
 
-    for i in range(steps + 1):
-      t = i / steps
+        for i in range(steps + 1):
+            t = i / steps
 
-      current_x = from_x + (to_x - from_x) * t
-      current_y = from_y + (to_y - from_y) * t
+            current_x = from_x + (to_x - from_x) * t
+            current_y = from_y + (to_y - from_y) * t
 
-      pyautogui.moveTo(current_x, current_y)
+            pyautogui.moveTo(current_x, current_y)
 
-      elapsed = time.time() - start_time
-      target = t * duration
-      if target > elapsed:
-        time.sleep(target - elapsed)
+            elapsed = time.time() - start_time
+            target = t * duration
+            if target > elapsed:
+                time.sleep(target - elapsed)
 
-    pyautogui.mouseUp()
+        pyautogui.mouseUp()
 
-  def press_hotkey(self, hotkey):
-    pyautogui.hotkey(*hotkey)
+    def press_hotkey(self, hotkey):
+        pyautogui.hotkey(*hotkey)
 
-  def dismiss_taskbar_thumbnail_overlay(self):
-    logger.debug("[PERFORM PC ACTIONS INTERNAL FUNCTION] Hopefully dismissing the popup")
-    x_position, y_position = pyautogui.position()
-    click_x_position = x_position - 70
-    click_y_position = y_position - 96
+    def dismiss_taskbar_thumbnail_overlay(self):
+        logger.debug(
+            "[PERFORM PC ACTIONS INTERNAL FUNCTION] Hopefully dismissing the popup"
+        )
+        x_position, y_position = pyautogui.position()
+        click_x_position = x_position - 70
+        click_y_position = y_position - 96
 
-    self.click(position_x=click_x_position, position_y=click_y_position)
+        self.click(position_x=click_x_position, position_y=click_y_position)
+
 
 if __name__ == "__main__":
-  pc = PCActions()
-  time.sleep(5)
-  pc.dismiss_taskbar_thumbnail_overlay()
+    pc = PCActions()
+    time.sleep(5)
+    pc.dismiss_taskbar_thumbnail_overlay()
