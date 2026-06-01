@@ -44,3 +44,8 @@
   border-color: var(--amber-dim) !important;
   box-shadow: 0 0 0 1px var(--amber-glow);
 }
+
+/* Ties the JavaScript class to your toast-out keyframe animation */
+.toast.toast-out {
+  animation: toast-out 300ms ease both;
+}

@@ -27,8 +27,12 @@ function show(message, type = 'info', duration = 3500) {
   container.appendChild(el);
 
   const remove = () => {
+    // Add the class to trigger your CSS fade/slide out effect
     el.classList.add('toast-out');
-    el.addEventListener('animationend', () => el.remove(), { once: true });
+    
+    // Fallback: Forcefully purge the element from the DOM after 400ms 
+    // to give the CSS transition/animation enough time to visually finish.
+    setTimeout(() => el.remove(), 400);
   };
 
   setTimeout(remove, duration);
@@ -37,5 +41,5 @@ function show(message, type = 'info', duration = 3500) {
 export const toast = {
   success: (msg, duration) => show(msg, 'success', duration),
   error:   (msg, duration) => show(msg, 'error',   duration),
-  info:    (msg, duration) => show(msg, 'info',     duration),
+  info:    (msg, duration) => show(msg, 'info',    duration),
 };
