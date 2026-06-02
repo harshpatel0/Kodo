@@ -1,12 +1,15 @@
 import sys
 import json
 import os
-import glob
 import subprocess
 
 
 def get_all_windows_apps():
+    """Queries the Windows Start Menu index directly to get ALL launchable apps
+    (both classic Win32 apps and modern UWP/Store apps) in one pass.
+    """
     app_map = {}
+    normalized_seen = {}
 
     ps_command = (
         "Get-StartApps | ForEach-Object { "
@@ -29,16 +32,29 @@ def get_all_windows_apps():
         for line in result.stdout.splitlines():
             if "||" in line:
                 friendly_name, app_id = line.split("||", 1)
-                clean_name = friendly_name.strip().lower()
+                name = friendly_name.strip()
+                name_lower = name.lower()
 
-                # If it's already a standard path or GUID, handle it,
-                # otherwise prefix it so os.startfile knows how to open it
-                if ":" in app_id or app_id.startswith("{"):
-                    app_map[clean_name] = app_id
+                norm_name = "".join(c for c in name_lower if c.isalnum())
+
+                if norm_name not in normalized_seen:
+                    # FIX: If it's a full direct disk path (e.g., C:\Program Files\...), use it as-is.
+                    # Otherwise (if it's a UWP AppID or a Windows System GUID), route it through shell:AppsFolder
+                    if ":" in app_id and not app_id.startswith("{"):
+                        app_map[name_lower] = app_id
+                    else:
+                        app_map[name_lower] = f"shell:AppsFolder\\{app_id}"
+
+                    normalized_seen[norm_name] = name_lower
                 else:
-                    app_map[clean_name] = f"shell:AppsFolder\\{app_id}"
-    except Exception:
-        pass
+                    existing_key = normalized_seen[norm_name]
+                    if len(name_lower) < len(existing_key):
+                        launch_path = app_map.pop(existing_key)
+                        app_map[name_lower] = launch_path
+                        normalized_seen[norm_name] = name_lower
+
+    except Exception as e:
+        print(f"Error indexing apps: {e}", file=sys.stderr)
 
     return app_map
 
