@@ -1,99 +1,112 @@
 # Browser Navigation — Actor Guide
 
-## ⚠️ TASK COMPLETION FOR VIDEO AND CONTENT TASKS
+---
 
-**Seeing a video in search results, recommendations, or the home feed is NOT done.**
+## PRIORITY RULES (Read First)
 
-Done for a video task means:
-- The **video's watch page** is the active window
-- The video player is visible and the video is loaded/playing
+### 1 — Search Box Priority
+When already on a website, ALWAYS use the site's own search box. NEVER use the browser address bar for on-site search.
 
-Done for a page/link task means:
-- The **target page is loaded** as the primary active display
+| Situation | Use |
+|---|---|
+| Already on the site (YouTube, GitHub, etc.) | Site search box |
+| Navigating to a new URL | Address bar (Ctrl+L) or `open_url` |
 
-You MUST click the video thumbnail or title link, then confirm the watch page has loaded before emitting done.
+The new-tab page search widget (Bing/Google widget) is a trap — ignore it.
+
+### 2 — Site vs Address Bar
+- YouTube search: press `/` to focus the search box
+- GitHub search: press `/` to focus the search box
+- Address bar: `Ctrl+L` — only for new URLs
+
+### 3 — Back and Forward Buttons
+The browser has Back and Forward buttons in the accessibility tree. USE THEM.
+- Made a mistake or landed on the wrong page? Click the **Back button** or press `Alt+Left`.
+- Need to go forward? Click the **Forward button** or press `Alt+Right`.
+- Prefer this over re-typing URLs. It is faster and safer.
 
 ---
 
-## ⚠️ SEARCH BOX PRIORITY — READ BEFORE TYPING
+## URL NAVIGATION
 
-**When you are already on a website (YouTube, Google, etc.), ALWAYS use the site's own search box. NEVER use the browser address bar for on-site search.**
-
-Priority order:
-1. **Site search box** (YouTube search box, Google search box, etc.) — use this when you are already on the site
-2. **Browser address bar** (Ctrl+L) — use ONLY for navigating to a new URL
-
-The new tab page search box (Bing, Google widget on new tab) is a trap element — do not use it for anything.
-
----
-## Address Bar
-
-Use Ctrl+L to focus the address bar before typing a URL. After Ctrl+L, the bar is focused — emit the type action immediately.
-
-Before typing, check the screenshot: if the previous URL is still visible and not highlighted, clear the field first. This prevents malformed URLs like `youtube.comhttps://`.
-
-## YouTube and Site Search Boxes
-
-When navigating to a site's own search box (YouTube, GitHub, etc.):
-- Locate it in the ACCESSIBILITY TREE by name before acting
-- Use keyboard shortcuts to focus if needed: `/` for YouTube, `/` for GitHub
-- Do NOT fall back to the address bar for site search — these are different targets
-- If the element is not in the tree: scroll_v to bring it into view
-
-## open_url Action
-
-For URL navigation, always prefer `open_url` over manual keystrokes:
-
+Prefer `open_url` for all URL navigation:
 ```json
 {"action": "open_url", "url": "https://example.com"}
 ```
 
-Only fall back to manual navigation (Ctrl+T → Ctrl+L → type → Enter) if open_url is unavailable.
+Manual fallback only if `open_url` is unavailable:
+1. `press_hotkey ctrl+t` — new tab if needed
+2. `press_hotkey ctrl+l` — focus address bar
+3. type the URL
+4. `press_key enter`
 
-## Wrong Page Recovery
+Before typing a URL, check the address bar. If the old URL is still visible and not highlighted, clear it first. This prevents malformed URLs like `youtube.comhttps://`.
 
-If the active window is a browser but the wrong page is loaded:
-1. `press_hotkey ctrl+l`
-2. type the correct URL
-3. `press_key enter`
+---
 
-Never declare stuck because you are on the wrong page within the browser.
+## PAYWALLED OR SIGN-IN REQUIRED CONTENT
 
-## Tab Safety
+### Paywalls (payment required)
+- If a page requires payment to proceed, STOP immediately.
+- Do NOT enter any payment details under any circumstances.
+- Emit `done` with a message: "Page requires payment. Stopping."
+- Go back using the Back button or `Alt+Left`.
 
-Before typing a URL, check if the active tab contains content unrelated to the current task. If it does, emit `press_hotkey ctrl+t` to open a new tab first.
+### Sign-In Walls
+Only attempt sign-in if one of these is true:
+- The task instruction explicitly provides credentials to use.
+- The task instruction explicitly says to use browser-saved or password manager credentials.
 
-## Type Submission
+If neither is true:
+- Do NOT attempt to sign in.
+- Do NOT guess or try saved credentials on your own.
+- Press `Alt+Left` or click Back to return to the previous page.
+- Continue the task without that content, or report that sign-in is required.
 
-The type action submits automatically. If the page title does not change after a type action, emit retry to re-focus and retype. Do NOT click Refresh.
+---
 
-## Type Failures
+## WRONG PAGE RECOVERY
 
-If a type action fails to navigate three consecutive times:
-- `/` to focus YouTube or GitHub search
-- `Ctrl+L` to focus the browser address bar
-- 
-## Result Matching
+1. Press `Alt+Left` or click the Back button first — fastest recovery.
+2. If Back does not help, use `open_url` with the correct URL.
+3. If on Bing or Google search when the task targets YouTube, go directly to `https://youtube.com` via `open_url`.
 
-When a step instruction says "whose title contains [X]", verify the element 
-name in the accessibility tree contains that string before clicking.
-If no matching element is visible, scroll_v to find one. 
-Never click an element whose name does not match the constraint.
+Never declare stuck because you landed on the wrong page.
 
+---
 
-## Rules 
-### WRONG SITE RECOVERY
-If the active window URL contains "bing.com" or 
-"google.com/search" and the task involves YouTube, immediately use 
-open_url to return to youtube.com. Do not search on Bing.
+## TASK COMPLETION
 
-### Completing the Action
+### Video tasks
+- Seeing a video in search results is NOT done.
+- Done = the video watch page is loaded and the player is visible.
+- Click the video title or thumbnail, then confirm the watch page loaded.
 
-Lead the user directly to the resource:
+### Page/link tasks
+- Done = the target page is fully loaded as the active window.
 
-- **YouTube video**: Navigate directly to the video's watch page. Seeing the video in search results is not enough — click the title or thumbnail.
-- **Section of a webpage**: Navigate directly to it, scroll if needed.
-- **Shop item**: Navigate directly to the product page.
-- **Form**: Fill it out using user-provided info or browser autofill suggestions.
-- **Page search**: Use the site's own search box. If not visible, look for a search icon or menu.
-- **Internet search**: Use the address bar only if you haven't yet reached the relevant site.
+### Shop item
+- Navigate to the product page directly.
+- STOP if a checkout or payment page appears.
+
+### Form
+- Fill using user-provided info or browser autofill if available.
+- STOP if payment details are required.
+
+---
+
+## TYPE AND SUBMIT
+
+- The `type` action submits automatically.
+- If the page does not change after typing, re-focus the input and retype.
+- Do NOT click Refresh.
+- If typing fails three times: press `/` (site search) or `Ctrl+L` (address bar) and retry.
+
+---
+
+## RESULT MATCHING
+
+When a step says "title contains [X]":
+1. Check the accessibility tree for an element whose name contains [X].
+2. Scroll if not visible.
+3. Only click if the name matches. Never click a non-matching element.
