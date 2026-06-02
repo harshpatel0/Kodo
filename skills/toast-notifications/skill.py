@@ -5,7 +5,7 @@ import json
 
 
 def show_toast(title, body):
-    toast = Notification(app_id="LMControl Toast Notifier Skill", title=title, msg=body)
+    toast = Notification(app_id="Kodo Toast Notifications Skill", title=title, msg=body)
     toast.show()
 
 
