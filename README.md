@@ -81,6 +81,8 @@ You'll also need [Ollama](https://ollama.com) installed and at least one model p
 
 ## Setup
 
+0. **Install Python Dependencies** by running `pip install -r requirements.txt` in the project's root folder.
+
 1. **Install Ollama** and pull a model. `gemma4:e4b` is what this was built and tested on:
 
    ```bash
@@ -99,8 +101,15 @@ You'll also need [Ollama](https://ollama.com) installed and at least one model p
 
 ---
 
-## Running LMControl
+## Running Kodo 
 
+### Using the Web API
+
+Kodo exposes an API, make sure all dependencies are installed and then run the main `main.py` file.
+
+> If the Live Desktop Preview does not show up, refresh the page.
+
+### Directly
 Open `orchestrator.py` and set your task at the bottom of the file. There are two modes, covered in the next section.
 
 ```python
