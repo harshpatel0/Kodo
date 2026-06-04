@@ -2,5 +2,6 @@
   "name": "toast-notifications",
   "description": "Use when you want to send a toast notification to the user",
   "actions": ["send_toast"],
-  "entry": "skill.py"
+  "entry": "skill.py",
+  "dependencies": ["winotify"]
 }
