@@ -1,6 +1,8 @@
-# LMControl
+# Kodo
 
-LMControl lets a local LLM take control of your Windows PC. It reads the live accessibility tree, reasons about what's on screen, and emits actions until the task is done. Clicks, keystrokes, file writes, code execution, whatever it takes. It runs entirely on your machine through [Ollama](https://ollama.com), so nothing leaves your computer.
+> Note, the name is being switched currently from LMControl to Kodo, some sections may still refer to LMControl
+
+Kodo lets a local LLM take control of your Windows PC. It reads the live accessibility tree, reasons about what's on screen, and emits actions until the task is done. Clicks, keystrokes, file writes, code execution, whatever it takes. It runs entirely on your machine through [Ollama](https://ollama.com), so nothing leaves your computer.
 
 It's not a polished product. It's a project that works well enough to be genuinely useful, built to see how far local models can go on real desktop tasks. Models get confused, occasionally do something baffling, and need hand-holding on complex apps. The architecture is designed to recover when that happens rather than just die.
 
@@ -81,6 +83,8 @@ You'll also need [Ollama](https://ollama.com) installed and at least one model p
 
 ## Setup
 
+0. **Install Python Dependencies** by running `pip install -r requirements.txt` in the project's root folder.
+
 1. **Install Ollama** and pull a model. `gemma4:e4b` is what this was built and tested on:
 
    ```bash
@@ -99,8 +103,15 @@ You'll also need [Ollama](https://ollama.com) installed and at least one model p
 
 ---
 
-## Running LMControl
+## Running Kodo 
 
+### Using the Web API
+
+Kodo exposes an API, make sure all dependencies are installed and then run the main `main.py` file.
+
+> If the Live Desktop Preview does not show up, refresh the page.
+
+### Directly
 Open `orchestrator.py` and set your task at the bottom of the file. There are two modes, covered in the next section.
 
 ```python
