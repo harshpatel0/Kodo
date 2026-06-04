@@ -10,6 +10,7 @@ import json
 
 import utils.strings as Strings
 from utils.logger import logger
+from utils.loading_text import get_loading_text
 
 from settings.settings import settings
 
@@ -48,6 +49,8 @@ def make_ollama_request(
     client, model_name, messages, temperature, keep_alive, output_format=OUTPUT_FORMAT
 ):
     """Makes a request to the Ollama client and returns the modern ChatResponse object."""
+    logger.debug(messages)
+    logger.info(get_loading_text())
     try:
         response_object = client.chat(
             model=model_name,
@@ -108,6 +111,8 @@ class SkillInstallationMode:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
+
+        logger.info("Resolving skill issues")
 
         response_obj = make_ollama_request(
             client=self.client,
