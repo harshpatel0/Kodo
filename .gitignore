@@ -15,3 +15,5 @@ lmcontrol.log
 
 settings.json
 venv/
+dbg_actor_model.txt
+dbg_make_ollama_request.txt
