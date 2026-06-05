@@ -10,6 +10,9 @@ import win32gui
 from utils.logger import logger
 import time
 from settings.settings import settings
+from utils.globals import (
+    CONTEXT_PROVIDER_UI_DIFF_THRESHOLD_PERCENTAGE as THRESHOLD_PERCENTAGE,
+)
 
 
 class ContextProvider:
@@ -261,20 +264,6 @@ class ContextProvider:
             return f"Could not read UI tree: {str(e)}"
 
 
-if __name__ == "__main__":
-    import keyboard
-
-    cp = ContextProvider()
-    while True:
-        if keyboard.is_pressed("k"):
-            logger.info(cp.get_ui_tree(cp.get_active_window()))
-        if keyboard.is_pressed("q"):
-            quit()
-
-
-THRESHOLD_PERCENTAGE = 20
-
-
 class UITreeHandler:
     context_provider = None
 
@@ -313,7 +302,7 @@ class UITreeHandler:
             self.initial_load = False
             ui_tree_elements = self.current_tree
             return_message = (
-                "Here is the full UI tree" + "\n".join(ui_tree_elements)
+                "Here is the full UI tree\n" + "\n".join(ui_tree_elements)
                 if ui_tree_elements
                 else "No UI elements found."
             )
@@ -322,13 +311,13 @@ class UITreeHandler:
             return return_message
 
         added_items_as_text = (
-            "Here are the added UI tree Items"
+            "Here are the added UI tree Items\n"
             + "\n".join(f"[+] {item}" for item in added_items)
             if added_items
             else "No additions to UI Tree were made"
         )
         removed_items_as_text = (
-            "Here are the removed UI tree items"
+            "Here are the removed UI tree items\n"
             + "\n".join(f"[-] {item}" for item in removed_items)
             if removed_items
             else "No removals to UI Tree were made"
