@@ -2,6 +2,8 @@ import sys
 import json
 import os
 import subprocess
+import psutil
+import time
 
 
 def get_all_windows_apps():
@@ -68,11 +70,28 @@ def open_app(app_name):
         None,
     )
 
-    if target:
-        os.startfile(target)
+    if not target:
+        print(f"App {app_name} not found and could not be launcehd", file=sys.stderr)
+        return
+
+    deadline = time.time() + 10
+
+    os.startfile(target)
+    exe_name = os.path.basename(target).lower()
+
+    is_uwp = target.startswith("shell:AppsFolder")
+
+    if is_uwp:
+        time.sleep(3)
         print(f"Launched {app_name}")
-    else:
-        print(f"App {app_name} not found.", file=sys.stderr)
+        return
+
+    while time.time() < deadline:
+        if any(p.name().lower() == exe_name for p in psutil.process_iter(["name"])):
+            print(f"Launched and verified: {app_name}")
+            return
+        time.sleep(0.5)
+    print(f"Launched {app_name} but could not verify")
 
 
 def get_list_of_installed_apps():
