@@ -12,6 +12,11 @@ import utils.strings as Strings
 from utils.logger import logger
 from utils.loading_text import get_loading_text
 
+from utils.globals import (
+    MODEL_DEFINITIONS_DEBUG_OLLAMA_REQUESTS_TO_FILE,
+    MODEL_DEFINITIONS_ENABLE_DEBUG_OLLAMA_REQUESTS,
+)
+
 from settings.settings import settings
 
 skill_orchestrator = Skills()
@@ -20,6 +25,7 @@ OUTPUT_FORMAT = "json"
 
 context_provider = ContextProvider()
 ui_tree_handler = UITreeHandler()
+
 
 if settings.orchestrator.use_experimental_autonomy_mode:
     ACTOR_MODEL_NAME = settings.models.autonomy_actor.model_name
@@ -46,10 +52,16 @@ else:
 
 
 def make_ollama_request(
-    client, model_name, messages, temperature, keep_alive, output_format=OUTPUT_FORMAT
+    client,
+    model_name: str,
+    messages: list,
+    temperature: float,
+    keep_alive: bool,
+    output_format=OUTPUT_FORMAT,
 ):
     """Makes a request to the Ollama client and returns the modern ChatResponse object."""
     logger.debug(messages)
+    print(messages)
     logger.info(get_loading_text())
     try:
         response_object = client.chat(
@@ -89,6 +101,58 @@ def make_ollama_request(
         response_object.message.content = response_object.message.content.strip()
 
     logger.debug(f"Ollama response: {response_object.model_dump()}")
+    response_dict = response_object.model_dump()
+
+    if MODEL_DEFINITIONS_ENABLE_DEBUG_OLLAMA_REQUESTS:
+        import json
+
+        content = json.loads(response_dict["message"]["content"])
+
+        total_duration = int(response_dict.get("total_duration")) / 1_000_000_000
+        load_duration = int(response_dict.get("load_duration")) / 1_000_000_000
+        prompt_eval_duration = (
+            int(response_dict.get("prompt_eval_duration")) / 1_000_000_000
+        )
+        eval_duration = int(response_dict.get("eval_duration")) / 1_000_000_000
+
+        generated_tokens = int(response_dict.get("eval_count"))
+        input_tokens = int(response_dict.get("prompt_eval_count"))
+
+        token_speed = generated_tokens / eval_duration
+
+        with open(
+            MODEL_DEFINITIONS_DEBUG_OLLAMA_REQUESTS_TO_FILE, "a", encoding="utf-8"
+        ) as file:
+            string = f"""
+{'=' * 20}
+Model Messages
+    Statistics
+        Total Duration: {total_duration}
+            Load Duration: {load_duration}
+            Prompt Evaluation Duration: {prompt_eval_duration}
+            Evaluation Duration: {eval_duration}
+        
+        Input Tokens: {input_tokens}
+        Generated Tokens: {generated_tokens}
+        Token Speed: {token_speed}
+
+    Input
+        System Prompt
+            {messages[0]["content"]}
+
+        User Prompt
+            {messages[1]["content"]}
+
+    Output
+        Response Content
+            {response_dict["message"]["content"]}
+
+        Extracted Conent Thinking Response
+            {response_dict["message"].get("thinking")}
+{'=' * 20}
+"""
+            file.write(string)
+            print(string)
 
     return response_object
 
@@ -228,8 +292,8 @@ Treat skill actions as first-class actions alongside the standard ones above.
         user_prompt = f"""
 # Step Context
 Current Task: {task}
-Current Step: {instruction}
-Success Condition: {expected_result}
+{'Instructions: ' + instruction if instruction else ''}
+{'Expected Result ' + expected_result if expected_result else ''}
 
 # App Context
 Active Window: {context_provider.get_active_window()}

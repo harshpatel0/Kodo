@@ -351,7 +351,7 @@ Available Skill Actions:
                 ):
                     self.hard_exit = True
 
-            self.step_result = actor_model.do_autonomy_step(
+            self.step_result = actor_model.do_step(
                 task=self.task,
                 additional_context=self.additional_context,
                 skills=self.skills,
@@ -465,15 +465,4 @@ def run_externally(task: str, mode_override: str | None = None):
 
 if __name__ == "__main__":
     task = "Display a Windows Toast Notification saying Hello World"
-
-    if not settings.orchestrator.use_experimental_autonomy_mode:
-        plan = models.planner_model.make_plan(task)
-
-        step_orchestrator = StepOrchestrator(
-            steps=plan, skills=plan.get("_actor_skills")
-        )
-        step_orchestrator.run()
-    else:
-        autonomy_orchestrator = AutonomyOrchestrator(task=task)
-        autonomy_orchestrator.run_skill_installation_mode()
-        autonomy_orchestrator.run()
+    run_externally(task=task)

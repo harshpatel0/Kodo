@@ -5,48 +5,16 @@ from context_provider import ContextProvider
 
 import utils.utils as utils
 from utils.logger import logger
+from utils.globals import (
+    ACTOR_MODEL_ENABLE_DEBUG_OUTPUT_PROMPTS_AND_RESULT_TO_FILE,
+    ACTOR_MODEL_DEBUG_USER_PROMPT_CONSTRUCTION_TO_FILE,
+)
 
 context = ContextProvider()
 actor_model = ActorModel()
 
 
-def do_step(step, task, additional_context=None, punishment_tally=None, skills=None):
-    instruction = step["instruction"]
-    expected_result = step["expected_result"]
-
-    user_prompt = actor_model.construct_user_prompt(
-        task=task, instruction=instruction, expected_result=expected_result
-    )
-
-    if additional_context != "":
-        user_prompt = actor_model.return_prompt_with_additional_context(
-            user_prompt, additional_context
-        )
-
-    if punishment_tally:
-        user_prompt = actor_model.return_prompt_with_additional_context(
-            user_prompt,
-            additional_context=punishment_tally,
-            accompanying_message="Here are the number of iterations you have made on this task",
-        )
-
-    response = actor_model.run(user_prompt, skills=skills)
-    action = json.loads(utils.strip_markdown_json(response).strip())
-
-    if not action:
-        action = {
-            "action": "retry",
-            "message": "Model returned an empty response, likely due to context overload. Retry with the same step.",
-        }
-        logger.warning(
-            "[INTERNAL ACTOR MODEL GUARD] The model returned an empty response, instructing the Step Orchestrator to retry"
-        )
-
-    logger.debug(action)
-    return action
-
-
-def do_autonomy_step(
+def do_step(
     task,
     history=None,
     additional_context=None,
@@ -103,6 +71,22 @@ def do_autonomy_step(
         logger.warning(
             "[INTERNAL ACTOR MODEL GUARD] The model returned an empty response, instructing the Step Orchestrator to retry"
         )
+
+    if ACTOR_MODEL_ENABLE_DEBUG_OUTPUT_PROMPTS_AND_RESULT_TO_FILE:
+        with open(
+            ACTOR_MODEL_DEBUG_USER_PROMPT_CONSTRUCTION_TO_FILE, "a", encoding="utf-8"
+        ) as file:
+            file.write(f"""
+User Prompt
+{"=" * 20}
+{user_prompt}
+
+Result
+{"=" * 20}
+{action}
+
+{"=" * 20}
+""")
 
     logger.debug(action)
     return action
