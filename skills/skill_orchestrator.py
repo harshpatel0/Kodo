@@ -20,6 +20,7 @@ from utils.logger import logger
 class Skills:
     _dispatch = {}
     _runner = PythonRunner()
+    installed_skill_packages = []
 
     _skills = {}
 
@@ -70,14 +71,24 @@ class Skills:
         )
 
         self.loaded_skills = []
+
         for skill in skills:
+            if skill in self.installed_skill_packages:
+                logger.debug(
+                    f"Skipping requested skill: {skill}, as it is already installed"
+                )
+                continue
             logger.info(f"Installing Skill {skill} for {consumer}")
             self.install_skill_defined_dependencies(skill=skill)
             skill_content = self.get_skill_doc(skill, consumer)
 
             if skill_content is None:
+                logger.warning(
+                    f"The skill content of {skill} is empty, skipping the load"
+                )
                 continue
 
+            self.installed_skill_packages.append(skill)
             self.loaded_skills.append(f"## Skill: {skill}\n{skill_content}")
 
         logger.info(f"Loaded all skills: {skills} for {consumer}")
