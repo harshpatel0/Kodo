@@ -40,18 +40,23 @@ class ActionHandlers:
 
     def handleDone(self):
         logger.info("The actor model claims the task is done, hard exiting...")
-        window_after = self.orchestrator.context_provider.get_active_window()
         element = self.orchestrator.step_result.get("element", "")
 
-        if element and element not in window_after:
-            logger.warning(
-                f"Actor claimed DONE, but '{element}' not in Window. Forcing retry."
-            )
-            self.orchestrator.additional_context += (
-                f"You claimed to be done, but I cannot see '{element}' in the active window. "
-                "Please ensure the action completed correctly.\n"
-            )
-            return "CONTINUE"
+        # Validate by checking the live UI tree, not just the window title.
+        # This catches cases where the actor claims an element exists but
+        # the accessibility tree no longer contains it.
+        if element:
+            ui_tree = self.orchestrator.context_provider.get_ui_tree()
+            ui_text = "\n".join(ui_tree) if isinstance(ui_tree, list) else str(ui_tree)
+            if element not in ui_text:
+                logger.warning(
+                    f"Actor claimed DONE, but '{element}' not found in UI tree. Forcing retry."
+                )
+                self.orchestrator.additional_context += (
+                    f"You claimed to be done, but '{element}' is not present in the current UI tree. "
+                    "Please ensure the action completed correctly.\n"
+                )
+                return "CONTINUE"
 
         self.orchestrator.hard_exit = True
         return "BREAK"
@@ -60,9 +65,12 @@ class ActionHandlers:
         logger.info(
             f"The Actor Model claims it is stuck, running another iteration with added context {self.orchestrator.iterations+1}/{MAX_ITERATIONS_PER_STEP}"
         )
+        # Include diagnostic info: the last action attempted and its result.
+        last_action = self.orchestrator.step_result.get("action", "unknown")
+        last_args = {k: v for k, v in self.orchestrator.step_result.items() if k != "action"}
         self.orchestrator.additional_context = (
-            self.orchestrator.additional_context
-            + f"{self.orchestrator.step_result['message']}"
+            f"[DIAGNOSTIC] Last action was '{last_action}' with args: {json.dumps(last_args)}.\n"
+            f"{self.orchestrator.step_result.get('message', '')}"
             + "\n"
         )
         return "CONTINUE"
@@ -71,10 +79,12 @@ class ActionHandlers:
         next_action = step_result.get("next", "")
         self.orchestrator.replan_history.append(next_action)
 
-        if (
-            len(self.orchestrator.replan_history) >= MAX_REPLAN_LOOP
-            and len(set(self.orchestrator.replan_history[-MAX_REPLAN_LOOP:])) == 1
-        ):
+        # Normalize replan entries by lowercasing and stripping whitespace
+        # so minor wording differences don't mask a real loop.
+        normalized = [a.strip().lower() for a in self.orchestrator.replan_history]
+        tail = normalized[-MAX_REPLAN_LOOP:] if len(normalized) >= MAX_REPLAN_LOOP else normalized
+
+        if len(tail) == MAX_REPLAN_LOOP and len(set(tail)) == 1:
             logger.critical(
                 f"Replan loop detected ({MAX_REPLAN_LOOP} identical replans), forcing exit."
             )
@@ -92,7 +102,7 @@ class ActionHandlers:
 
     def handleRetry(self):
         logger.warning(
-            f"[STEP_ORCHESTRATOR] Retrying with added context {self.iterations+1}/{MAX_ITERATIONS_PER_STEP}"
+            f"[STEP_ORCHESTRATOR] Retrying with added context {self.orchestrator.iterations+1}/{MAX_ITERATIONS_PER_STEP}"
         )
         try:
             self.orchestrator.additional_context = (
@@ -252,13 +262,27 @@ class StepOrchestrator:
                     self.hard_exit = True
                     break
 
-                self.step_result = actor_model.do_step(
-                    step,
-                    self.task if not self.temp_task else self.temp_task,
-                    self.additional_context,
-                    punishment_tally=f"Iteration {iterations}/{MAX_ITERATIONS_PER_STEP} for this step",
-                    skills=self.skills,
-                )
+                last_action_info = ""
+                if getattr(self, 'step_result', {}) and self.step_result.get("action"):
+                    last_action_info = (
+                        f"[LAST ACTION] action='{self.step_result['action']}' "
+                        f"args={{{', '.join(f'{k}={v!r}' for k, v in self.step_result.items() if k != 'action')}}}\n"
+                    )
+
+                try:
+                    self.step_result = actor_model.do_step(
+                        step,
+                        self.task if not self.temp_task else self.temp_task,
+                        self.additional_context,
+                        punishment_tally=f"Iteration {iterations}/{MAX_ITERATIONS_PER_STEP} for this step\n{last_action_info}",
+                        skills=self.skills,
+                    )
+                except Exception as e:
+                    logger.error(f"Step execution failed: {e}")
+                    self.step_result = {
+                        "action": "retry",
+                        "message": f"Step execution error: {e}",
+                    }
                 action_result = parse_action(self.step_result)
 
                 logger.debug(f"Action Result: {action_result}")
@@ -295,6 +319,7 @@ class AutonomyOrchestrator:
         self.punishment_tally = ""
         self.history = ""
         self.runtime_skills = None
+        self.last_action = None
 
         self.installed_skills = []
 
@@ -316,11 +341,29 @@ class AutonomyOrchestrator:
         else:
             self.installed_skills = [installed_skills]
 
+    def _truncate_history(self, history: str, max_chars: int = 4000) -> str:
+        """Keep only the most recent entries of the history string, dropping oldest.
+        Uses ~4 chars/token heuristic to stay within context window budgets.
+        """
+        if not history or len(history) <= max_chars:
+            return history
+        entries = history.strip().split("\n")
+        trimmed = []
+        for entry in reversed(entries):
+            candidate = "\n".join([entry] + trimmed)
+            if len(candidate) > max_chars:
+                break
+            trimmed.insert(0, entry)
+        return "\n".join(trimmed) if trimmed else ""
+
     def run(self):
         while not self.hard_exit:
 
+            # Truncate history to prevent unbounded context growth
+            truncated_history = self._truncate_history(self.history)
+
             logger.info(f"""
-Running iteraton {self.iterations} out of {settings.orchestrator.autonomy_orchestrator.max_total_iterations}
+Running iteration {self.iterations} out of {settings.orchestrator.autonomy_orchestrator.max_total_iterations}
 Enforcing Iteration Limit: {settings.orchestrator.autonomy_orchestrator.enforce_max_total_iterations}
 
 Task = {self.task}
@@ -334,13 +377,10 @@ Skills:
 Runtime Skills:
 {self.runtime_skills}
 
-Punishment Tally:
-f"{self.iterations} out of maximum {settings.orchestrator.autonomy_orchestrator.max_total_iterations}"
+History (truncated):
+{truncated_history}
 
-History:
-{self.history}
-
-Available Skill Actions: 
+Available Skill Actions:
 {self.skill_orchestrator.list_actions()}
 """)
 
@@ -351,15 +391,29 @@ Available Skill Actions:
                 ):
                     self.hard_exit = True
 
-            self.step_result = actor_model.do_step(
-                task=self.task,
-                additional_context=self.additional_context,
-                skills=self.skills,
-                runtime_skills=self.runtime_skills,
-                punishment_tally=f"{self.iterations} out of maximum {settings.orchestrator.autonomy_orchestrator.max_total_iterations}",
-                history=self.history,
-                available_skill_actions=self.skill_orchestrator.list_actions(),
-            )
+            last_action_info = ""
+            if getattr(self, 'step_result', {}) and self.step_result.get("action"):
+                last_action_info = (
+                    f"[LAST ACTION] action='{self.step_result['action']}' "
+                    f"args={{{', '.join(f'{k}={v!r}' for k, v in self.step_result.items() if k != 'action')}}}\n"
+                )
+
+            try:
+                self.step_result = actor_model.do_step(
+                    task=self.task,
+                    additional_context=self.additional_context,
+                    skills=self.skills,
+                    runtime_skills=self.runtime_skills,
+                    punishment_tally=f"Iteration {self.iterations} out of maximum {settings.orchestrator.autonomy_orchestrator.max_total_iterations}\n{last_action_info}",
+                    history=self.history,
+                    available_skill_actions=self.skill_orchestrator.list_actions(),
+                )
+            except Exception as e:
+                logger.error(f"Autonomy step failed: {e}")
+                self.step_result = {
+                    "action": "retry",
+                    "message": f"Step execution error: {e}",
+                }
 
             self.iterations += 1
 
@@ -438,6 +492,26 @@ Output of Iteration: {self.iterations}
                     self.history + f"\n {self.step_result.get('history', "")}"
                 )
                 self.runtime_skills = None
+
+                # Guard against the actor repeating the same action — if the last
+                # two actions are identical the actor is likely stuck in a loop.
+                if self.last_action is not None and self.step_result.get("action") == self.last_action.get("action"):
+                    # Allow one retry with the same action before bailing
+                    if getattr(self, "_same_action_count", 0) == 0:
+                        self._same_action_count = 1
+                        self.additional_context += (
+                            f"[WARNING] You just performed '{self.last_action['action']}' and nothing changed. "
+                            "Try a different approach.\n"
+                        )
+                    else:
+                        self.additional_context += (
+                            f"[CRITICAL] You repeated '{self.last_action['action']}' twice without success. "
+                            "Stop and try a completely different approach.\n"
+                        )
+                        self.hard_exit = True
+                else:
+                    self._same_action_count = 0
+                self.last_action = self.step_result
 
 
 def run_externally(task: str, mode_override: str | None = None):

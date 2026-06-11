@@ -70,6 +70,7 @@ class ContextProvider:
         skip_after_ticks = 0
         WAITING_PERIOD = settings.context_provider.waiting_period
         SKIP_TICKS = settings.context_provider.skip_after_ticks
+        POLL_INTERVAL = 0.1
 
         # --- Stabilization phase ---
         while stable_ticks < WAITING_PERIOD:
@@ -86,9 +87,9 @@ class ContextProvider:
 
             if stable_ticks < WAITING_PERIOD:
                 skip_after_ticks += 1
-                time.sleep(0.25)
+                time.sleep(POLL_INTERVAL)
 
-            if skip_after_ticks == SKIP_TICKS:
+            if skip_after_ticks >= SKIP_TICKS:
                 break
 
         logger.debug(f"UI Stabilized with {last_count} elements. Extracting data...")
@@ -272,12 +273,23 @@ class UITreeHandler:
         self.current_tree = self.context_provider.get_ui_tree()
         self.previous_tree = self.current_tree
         self.initial_load = True
+        self._cache_tree = []
+        self._cache_time = 0.0
+        self._cache_ttl = 0.15
+
+    def _get_cached_or_fresh_tree(self):
+        now = time.time()
+        if now - self._cache_time < self._cache_ttl and self._cache_tree:
+            return self._cache_tree
+        self._cache_tree = self.context_provider.get_ui_tree()
+        self._cache_time = now
+        return self._cache_tree
 
     def _get_tree(self):
         """Gathers added or removed trees as differences, rather than spitting the whole tree out"""
 
         self.previous_tree = self.current_tree
-        self.current_tree = self.context_provider.get_ui_tree()
+        self.current_tree = self._get_cached_or_fresh_tree()
 
         added_items = set(self.current_tree) - set(self.previous_tree)
         removed_items = set(self.previous_tree) - set(self.current_tree)

@@ -74,7 +74,9 @@ def parse_action(action):
 
         case "clear_field":
             pc.click(action.get("x"), action.get("y"))
+            time.sleep(0.1)  # let the target element receive focus
             pc.press_hotkey(["ctrl", "a"])
+            time.sleep(0.05)  # let select-all complete
             pc.press_key("backspace")
 
         case "python":

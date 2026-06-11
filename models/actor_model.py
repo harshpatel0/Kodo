@@ -1,6 +1,6 @@
 import json
 
-from models.ollama.model_definitions import ActorModel
+from models.ollama.model_definitions import ActorModel, make_ollama_request
 from context_provider import ContextProvider
 
 import utils.utils as utils
@@ -12,6 +12,37 @@ from utils.globals import (
 
 context = ContextProvider()
 actor_model = ActorModel()
+
+ALLOWED_ACTIONS = {
+    "click", "type", "submit", "press_key", "press_hotkey",
+    "clear_field", "drag", "scroll_v", "scroll_h",
+    "done", "stuck", "retry", "replan", "python",
+}
+
+SKILL_ACTIONS = {}
+
+
+def _validate_action(action: dict) -> tuple[dict | None, str | None]:
+    """Validate an action dict has required fields for the action type.
+    Returns (action, None) if valid, (None, error_message) if invalid.
+    """
+    action_type = action.get("action", "")
+
+    if action_type in ("done",):
+        return action, None
+
+    if action_type == "retry":
+        if "message" not in action:
+            action["message"] = "No message provided"
+        return action, None
+
+    if action_type not in ALLOWED_ACTIONS and action_type not in SKILL_ACTIONS:
+        return None, f"Unknown action type '{action_type}'. Allowed: {', '.join(sorted(ALLOWED_ACTIONS))}"
+
+    if action_type in ("click",) and ("x" not in action or "y" not in action):
+        return None, "click action requires 'x' and 'y' coordinates"
+
+    return action, None
 
 
 def do_step(
@@ -61,16 +92,31 @@ def do_step(
         )
 
     response = actor_model.run(user_prompt, skills=skills)
-    action = json.loads(utils.strip_markdown_json(response).strip())
+    raw = utils.strip_markdown_json(response).strip()
+
+    action = None
+    parse_error = None
+
+    action, parse_error = utils.try_parse_json(raw)
+
+    if action:
+        action, validation_error = _validate_action(action)
+        if validation_error:
+            action = None
+            parse_error = validation_error
 
     if not action:
+        logger.warning(
+            f"[ACTOR MODEL] JSON parse/validation failed: {parse_error}. "
+            f"Raw response: {raw[:200]}"
+        )
         action = {
             "action": "retry",
-            "message": "Model returned an empty response, likely due to context overload. Retry with the same step.",
+            "message": (
+                f"Model returned unparseable response. {parse_error}. "
+                f"Raw output was:\n{raw[:500]}"
+            ),
         }
-        logger.warning(
-            "[INTERNAL ACTOR MODEL GUARD] The model returned an empty response, instructing the Step Orchestrator to retry"
-        )
 
     if ACTOR_MODEL_ENABLE_DEBUG_OUTPUT_PROMPTS_AND_RESULT_TO_FILE:
         with open(

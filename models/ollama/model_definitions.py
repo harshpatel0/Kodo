@@ -7,6 +7,8 @@ from context_provider import UITreeHandler
 from skills.skill_orchestrator import Skills
 import ollama
 import json
+import time
+import random
 
 import utils.strings as Strings
 from utils.logger import logger
@@ -51,6 +53,18 @@ else:
     USING_AUTONOMY_MODE = False
 
 
+class OllamaError(Exception):
+    pass
+
+
+class OllamaConnectionError(OllamaError):
+    pass
+
+
+class OllamaRequestError(OllamaError):
+    pass
+
+
 def make_ollama_request(
     client,
     model_name: str,
@@ -58,72 +72,101 @@ def make_ollama_request(
     temperature: float,
     keep_alive: bool,
     output_format=OUTPUT_FORMAT,
+    max_retries: int = 3,
+    request_timeout: int = 120,
 ):
-    """Makes a request to the Ollama client and returns the modern ChatResponse object."""
-    logger.debug(messages)
-    print(messages)
-    logger.info(get_loading_text())
-    try:
-        response_object = client.chat(
-            model=model_name,
-            messages=messages,
-            options={"temperature": temperature},
-            keep_alive=keep_alive,
-            format=output_format,
-        )
-    except KeyboardInterrupt:
-        logger.warning("CTRL+C pressed, interrupting request and exiting")
-        exit(0)
+    """Makes a request to the Ollama client with retry+backoff.
+    Raises OllamaError on persistent failure instead of killing the process.
+    """
+    last_error = None
 
-    except ConnectionError:
-        logger.error(
-            f"Failed to connect to Ollama server at {settings.models.ollama_server}. Please ensure the server is running and accessible."
-        )
-        exit(1)
+    for attempt in range(max_retries):
+        try:
+            logger.debug(messages)
+            print(messages)
+            logger.info(get_loading_text())
 
-    except ollama.ResponseError as e:
-        logger.error(
-            f"Ollama API error (HTTP {e.status_code}) for model '{model_name}': {e.error}"
-        )
-        exit(1)
+            response_object = client.chat(
+                model=model_name,
+                messages=messages,
+                options={"temperature": temperature},
+                keep_alive=keep_alive,
+                format=output_format,
+            )
 
-    except ollama.RequestError as e:
-        logger.error(f"Bad request to Ollama for model '{model_name}': {e.error}")
-        exit(1)
+            if response_object and hasattr(response_object, "message"):
+                response_object.message.content = response_object.message.content.strip()
 
-    except Exception as e:
-        logger.error(
-            f"Unexpected error during Ollama request for model '{model_name}': {str(e)}"
-        )
-        exit(1)
+            logger.debug(f"Ollama response: {response_object.model_dump()}")
+            response_dict = response_object.model_dump()
 
-    if response_object and hasattr(response_object, "message"):
-        response_object.message.content = response_object.message.content.strip()
+            if MODEL_DEFINITIONS_ENABLE_DEBUG_OLLAMA_REQUESTS:
+                _write_debug_log(messages, response_dict)
 
-    logger.debug(f"Ollama response: {response_object.model_dump()}")
-    response_dict = response_object.model_dump()
+            return response_object
 
-    if MODEL_DEFINITIONS_ENABLE_DEBUG_OLLAMA_REQUESTS:
-        import json
+        except KeyboardInterrupt:
+            logger.warning("CTRL+C pressed, interrupting request and exiting")
+            raise
 
-        content = json.loads(response_dict["message"]["content"])
+        except ConnectionError as e:
+            last_error = OllamaConnectionError(
+                f"Failed to connect to Ollama server at {settings.models.ollama_server}: {e}"
+            )
+            logger.warning(
+                f"Connection error (attempt {attempt+1}/{max_retries}): {e}"
+            )
 
-        total_duration = int(response_dict.get("total_duration")) / 1_000_000_000
-        load_duration = int(response_dict.get("load_duration")) / 1_000_000_000
-        prompt_eval_duration = (
-            int(response_dict.get("prompt_eval_duration")) / 1_000_000_000
-        )
-        eval_duration = int(response_dict.get("eval_duration")) / 1_000_000_000
+        except ollama.ResponseError as e:
+            last_error = OllamaRequestError(
+                f"Ollama API error (HTTP {e.status_code}) for model '{model_name}': {e.error}"
+            )
+            logger.warning(
+                f"Ollama API error (attempt {attempt+1}/{max_retries}): HTTP {e.status_code}"
+            )
+            if e.status_code == 400:
+                logger.error("Bad request — likely context overflow or invalid format.")
+                raise last_error
 
-        generated_tokens = int(response_dict.get("eval_count"))
-        input_tokens = int(response_dict.get("prompt_eval_count"))
+        except ollama.RequestError as e:
+            last_error = OllamaRequestError(
+                f"Bad request to Ollama for model '{model_name}': {e.error}"
+            )
+            logger.warning(
+                f"Ollama request error (attempt {attempt+1}/{max_retries}): {e}"
+            )
 
-        token_speed = generated_tokens / eval_duration
+        except Exception as e:
+            last_error = OllamaError(
+                f"Unexpected error during Ollama request for model '{model_name}': {str(e)}"
+            )
+            logger.warning(
+                f"Unexpected error (attempt {attempt+1}/{max_retries}): {e}"
+            )
 
-        with open(
-            MODEL_DEFINITIONS_DEBUG_OLLAMA_REQUESTS_TO_FILE, "a", encoding="utf-8"
-        ) as file:
-            string = f"""
+        if attempt < max_retries - 1:
+            sleep_time = (2 ** attempt) + random.uniform(0, 1)
+            logger.info(f"Retrying in {sleep_time:.1f}s...")
+            time.sleep(sleep_time)
+
+    raise last_error
+
+
+def _write_debug_log(messages, response_dict):
+    total_duration = int(response_dict.get("total_duration", 0)) / 1_000_000_000
+    load_duration = int(response_dict.get("load_duration", 0)) / 1_000_000_000
+    prompt_eval_duration = (
+        int(response_dict.get("prompt_eval_duration", 0)) / 1_000_000_000
+    )
+    eval_duration = int(response_dict.get("eval_duration", 0)) / 1_000_000_000
+    generated_tokens = int(response_dict.get("eval_count", 0))
+    input_tokens = int(response_dict.get("prompt_eval_count", 0))
+    token_speed = generated_tokens / eval_duration if eval_duration > 0 else 0
+
+    with open(
+        MODEL_DEFINITIONS_DEBUG_OLLAMA_REQUESTS_TO_FILE, "a", encoding="utf-8"
+    ) as file:
+        string = f"""
 {'=' * 20}
 Model Messages
     Statistics
@@ -151,10 +194,21 @@ Model Messages
             {response_dict["message"].get("thinking")}
 {'=' * 20}
 """
-            file.write(string)
-            print(string)
+        file.write(string)
+        print(string)
 
-    return response_object
+
+def estimate_tokens(text: str) -> int:
+    """Rough token estimate (~4 chars per token for most models)."""
+    return len(text) // 4
+
+
+def truncate_to_token_limit(text: str, max_tokens: int) -> str:
+    """Truncate text to stay within a rough token budget."""
+    if estimate_tokens(text) <= max_tokens:
+        return text
+    max_chars = max_tokens * 4
+    return text[:max_chars] + "\n...[truncated]"
 
 
 class SkillInstallationMode:
@@ -187,7 +241,9 @@ class SkillInstallationMode:
         )
 
         raw_content = response_obj.message.content if response_obj else ""
-        skills_data = json.loads(raw_content) if raw_content else {}
+        import utils.utils as utils
+        skills_data, _ = utils.try_parse_json(raw_content) if raw_content else ({}, None)
+        skills_data = skills_data or {}
         skills = skills_data.get("skills", [])
 
         logger.debug(f"Requested Skills from Planner \n {skills}")

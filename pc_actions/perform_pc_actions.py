@@ -19,8 +19,8 @@ class PCActions:
     def type_text(self, text, position_x, position_y, interval=0.01):
         if position_x != None or position_y != None:
             self.click(button="left", position_x=position_x, position_y=position_y)
+            time.sleep(0.1)  # let the target element receive focus
 
-        time.sleep(interval * 5)
         pyautogui.write(text, interval=interval)
 
     def press_key(self, key):

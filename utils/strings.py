@@ -65,6 +65,33 @@ You must populate this structural schema:
     }
   ]
 }
+```
+
+### FEW-SHOT EXAMPLES
+
+```
+Example 1 - Open a website in Chrome:
+{
+  "task": "Open google.com in Chrome browser",
+  "steps": [
+    {"id": 1, "instruction": "Press Hotkey [\"win\", \"s\"]", "expected_result": "Windows search bar opens on the taskbar", "fallback": "Click the search icon on the taskbar instead"},
+    {"id": 2, "instruction": "Type \"Chrome\" into the search input", "expected_result": "Chrome app appears as the top search result", "fallback": "Type \"Google Chrome\" if just \"Chrome\" doesn't match"},
+    {"id": 3, "instruction": "Press Key \"enter\"", "expected_result": "Chrome browser window opens as the active foreground window", "fallback": "Click the Chrome result in the search panel"},
+    {"id": 4, "instruction": "Press Hotkey [\"ctrl\", \"l\"]", "expected_result": "URL address bar is highlighted in Chrome", "fallback": "Click the address bar at the top of the Chrome window"},
+    {"id": 5, "instruction": "Type \"google.com\" into the URL bar", "expected_result": "google.com is typed into the URL bar", "fallback": "Type \"https://www.google.com\" instead"},
+    {"id": 6, "instruction": "Press Key \"enter\"", "expected_result": "Google homepage loads as the active tab", "fallback": "Click the Go/Enter arrow in the URL bar"}
+  ]
+}
+
+Example 2 - Create and save a text file:
+{
+  "task": "Create a text file on the desktop called notes.txt with content 'Hello World'",
+  "steps": [
+    {"id": 1, "instruction": "Press Hotkey [\"win\", \"d\"]", "expected_result": "Desktop is shown", "fallback": ""},
+    {"id": 2, "instruction": "Press Hotkey [\"alt\", \"f4\"] if a window is still active and repeat step 1", "expected_result": "Desktop is visible as the active screen", "fallback": ""}
+  ]
+}
+```
 
 PRE-OUTPUT COMPLIANCE FILTER
 - Before rendering your payload, evaluate every single step object inside your array:
@@ -124,6 +151,30 @@ Your response must consist exclusively of a single valid JSON object. No preambl
 {"action": "stuck", "message": "Detailed explanation of what application window or state blocked execution", "history": "string"}
 {"action": "retry", "message": "Detailed description of why the current step failed and what UI state adjustment is required", "history": "string"}
 {"action": "done"}
+```
+
+### FEW-SHOT EXAMPLES
+
+```
+Accessibility Tree Input:
+Button | name='Chrome' | x=120 y=1050
+Pane | name='Address bar' | x=200 y=60
+
+Example 1 - Click a button:
+{"action": "click", "x": 120, "y": 1050, "button": "left", "element": "Chrome", "history": "Clicked Chrome icon to launch browser"}
+
+Example 2 - Type into a focused field:
+{"action": "type", "text": "hello world", "x": 200, "y": 60, "history": "Typed search query into address bar"}
+
+Example 3 - Submit a search:
+{"action": "submit", "text": "https://example.com", "x": 200, "y": 60, "history": "Navigated to example.com"}
+
+Example 4 - Done (task fully complete):
+{"action": "done"}
+
+Example 5 - Retry after error:
+{"action": "retry", "message": "Click did not register, element may not be visible", "history": "Retrying click on Chrome icon"}
+```
 
 """
 
@@ -242,4 +293,27 @@ Every action except `done` MUST include a detailed, single-line `history` string
 
 - **done**: Exits the runtime session entirely. Emit ONLY when you have read the current tree layout and physically verified the target task is completely finished.
   `{"action": "done"}`
+
+### FEW-SHOT EXAMPLES
+
+```
+Accessibility Tree Input:
+Button | name='Chrome' | x=120 y=1050
+Edit | name='Search box' | x=300 y=80
+
+Example 1 - Launch app and search:
+OBSERVE: Chrome icon is visible on the taskbar
+REASON: Need to open Chrome first to perform the task
+ACT: {"action": "click", "x": 120, "y": 1050, "button": "left", "element": "Chrome", "history": "Clicked Chrome icon on taskbar to launch browser"}
+
+Example 2 - Type and submit search:
+OBSERVE: Edit field for search box is visible at (300, 80)
+REASON: Browser is open, search box is visible and focused
+ACT: {"action": "submit", "text": "Python programming tutorial", "x": 300, "y": 80, "history": "Typed search query into search box and submitted"}
+
+Example 3 - Handle a stuck state:
+OBSERVE: No interactive elements visible, window may be hung
+REASON: Application may not have launched, or a pop-up is blocking
+ACT: {"action": "retry", "message": "Browser did not appear after clicking Chrome icon, retrying", "history": "Retrying Chrome launch"}
+```
 """
