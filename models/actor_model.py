@@ -1,6 +1,4 @@
-import json
-
-from models.ollama.model_definitions import ActorModel
+from models.model_definitions import ActorModel
 from context_provider import ContextProvider
 
 import utils.utils as utils
@@ -61,16 +59,19 @@ def do_step(
         )
 
     response = actor_model.run(user_prompt, skills=skills)
-    action = json.loads(utils.strip_markdown_json(response).strip())
+    raw = utils.strip_markdown_json(response).strip()
+
+    action, parse_error = utils.try_parse_json(raw)
 
     if not action:
+        logger.warning(
+            f"[ACTOR MODEL] JSON parse failed: {parse_error}. "
+            f"Raw response: {raw[:200]}"
+        )
         action = {
             "action": "retry",
-            "message": "Model returned an empty response, likely due to context overload. Retry with the same step.",
+            "message": f"Model returned unparseable response. {parse_error}. Raw output:\n{raw[:500]}",
         }
-        logger.warning(
-            "[INTERNAL ACTOR MODEL GUARD] The model returned an empty response, instructing the Step Orchestrator to retry"
-        )
 
     if ACTOR_MODEL_ENABLE_DEBUG_OUTPUT_PROMPTS_AND_RESULT_TO_FILE:
         with open(

@@ -64,14 +64,21 @@ def post_settings(settings_json: dict):
 
 
 def _kill_thread(thread_id: int):
-    """Raise SystemExit in a running thread by its OS thread ID."""
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+    """Raise SystemExit in a running thread by its OS thread ID.
+    Uses a safer two-call pattern to avoid corrupting thread state.
+    """
+    if thread_id == threading.current_thread().ident:
+        return
+
+    ctypes.pythonapi.PyThreadState_SetAsyncExc(
         ctypes.c_ulong(thread_id),
         ctypes.py_object(SystemExit),
     )
 
-    if res == 0:
-        raise ValueError(f"No thread with id {thread_id}")
+    ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_ulong(thread_id),
+        ctypes.c_long(0),
+    )
 
 
 @app.websocket("/run/")
@@ -83,10 +90,10 @@ async def run(websocket: WebSocket, task: str, mode_override: str | None = None)
             reason="Task is a required parameter",
         )
 
-    if mode_override and mode_override not in ["planner", "autonomy"]:
+    if mode_override and mode_override not in ["planner-actor", "autonomy"]:
         raise WebSocketException(
             code=ws_status.WS_1008_POLICY_VIOLATION,
-            reason="Mode Overrides can only be 'planner' or 'autonomy'",
+            reason="Mode Overrides can only be 'planner-actor' or 'autonomy'",
         )
 
     await websocket.accept()

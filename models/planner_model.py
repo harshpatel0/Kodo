@@ -4,7 +4,7 @@ root = rootutils.setup_root(__file__, pythonpath=True)
 
 import json
 from context_provider import ContextProvider
-from models.ollama.model_definitions import PlannerModel, SkillInstallationMode
+from models.model_definitions import PlannerModel, SkillInstallationMode
 from skills.skill_orchestrator import Skills
 import utils.utils as utils
 from utils.logger import logger
@@ -26,11 +26,14 @@ def make_plan(task: str):
     response = planner_model.run(task=task, skills=planner_skills)
     logger.info(response)
 
-    response = utils.strip_markdown_json(response)
-    plan = json.loads(response)
+    plan, parse_error = utils.try_parse_json(response)
 
-    # Carry actor skills forward for the orchestrator
-    plan["_actor_skills"] = actor_skills
+    if plan is None:
+        logger.error(f"Planner model returned unparseable JSON: {parse_error}")
+        logger.error(f"Raw response: {response[:500]}")
+        plan = {"task": task, "steps": [], "_parse_error": parse_error}
+
+    plan.setdefault("_actor_skills", actor_skills)
 
     return plan
 
