@@ -8,7 +8,7 @@ import json
 from utils.logger import logger
 from settings.settings import settings
 
-from models.ollama.model_definitions import SkillInstallationMode
+from models.model_definitions import SkillInstallationMode
 from skills.skill_orchestrator import Skills
 
 pc_actions = PCActions()
@@ -42,9 +42,6 @@ class ActionHandlers:
         logger.info("The actor model claims the task is done, hard exiting...")
         element = self.orchestrator.step_result.get("element", "")
 
-        # Validate by checking the live UI tree, not just the window title.
-        # This catches cases where the actor claims an element exists but
-        # the accessibility tree no longer contains it.
         if element:
             ui_tree = self.orchestrator.context_provider.get_ui_tree()
             ui_text = "\n".join(ui_tree) if isinstance(ui_tree, list) else str(ui_tree)
