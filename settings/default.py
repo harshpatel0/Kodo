@@ -8,6 +8,7 @@ default_settings = {
         "anthropic": {
             "api_key_env_var": "ANTHROPIC_API_KEY",
             "base_url": None,
+            "effort": "medium",
         },
         "google": {
             "api_key_env_var": "GOOGLE_API_KEY",
