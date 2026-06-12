@@ -38,7 +38,9 @@ def parse_action(action):
                 return_command = "RETRY"
 
         case "type":
-            pc.type_text(action["text"], action.get("x"), action.get("y"))
+            x = int(action["x"]) if action.get("x") is not None else None
+            y = int(action["y"]) if action.get("y") is not None else None
+            pc.type_text(action["text"], x, y)
 
         case "submit":
             pc.type_text(action["text"], action.get("x"), action.get("y"))
