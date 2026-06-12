@@ -182,8 +182,11 @@ class ContextProvider:
         return elements
 
     def get_active_window(self):
-        active_window = gw.getActiveWindow()
-        return active_window.title if active_window else "Desktop"
+        try:
+            active_window = gw.getActiveWindow()
+            return active_window.title if active_window else "Desktop"
+        except Exception:
+            return "Desktop"
 
     def get_installed_apps(self):
         if not self.installed_apps:
@@ -276,6 +279,7 @@ class UITreeHandler:
         self._cache_tree = []
         self._cache_time = 0.0
         self._cache_ttl = 0.15
+        self._last_active_window = self.context_provider.get_active_window()
 
     def _get_cached_or_fresh_tree(self):
         now = time.time()
@@ -297,6 +301,25 @@ class UITreeHandler:
         return (added_items, removed_items)
 
     def request_tree_diffs(self):
+        active_window = self.context_provider.get_active_window()
+        window_changed = active_window != self._last_active_window
+        self._last_active_window = active_window
+
+        # Always send the full tree when the active window changes
+        if window_changed or self.initial_load:
+            self.initial_load = False
+            self._cache_tree = []
+            self.current_tree = self.context_provider.get_ui_tree()
+            self.previous_tree = list(self.current_tree)
+            ui_tree_elements = self.current_tree
+            return_message = (
+                "Here is the full UI tree\n" + "\n".join(ui_tree_elements)
+                if ui_tree_elements
+                else "No UI elements found."
+            )
+            logger.debug(f"Returning full UI Tree (window changed)\n{return_message}")
+            return return_message
+
         added_items, removed_items = self._get_tree()
 
         items_in_current_tree = len(self.current_tree)
@@ -307,18 +330,13 @@ class UITreeHandler:
         )
         threshold_of_item_changes = (THRESHOLD_PERCENTAGE / 100) * items_in_current_tree
 
-        if (
-            difference_in_items_from_trees >= threshold_of_item_changes
-            or self.initial_load
-        ):
-            self.initial_load = False
+        if difference_in_items_from_trees >= threshold_of_item_changes:
             ui_tree_elements = self.current_tree
             return_message = (
                 "Here is the full UI tree\n" + "\n".join(ui_tree_elements)
                 if ui_tree_elements
                 else "No UI elements found."
             )
-
             logger.debug(f"Returning full UI Tree\n{return_message}")
             return return_message
 
@@ -340,7 +358,9 @@ class UITreeHandler:
         return ui_tree
 
     def force_reload_ui_tree(self):
-        self._get_tree()
+        self._cache_tree = []
+        self.current_tree = self.context_provider.get_ui_tree()
+        self.previous_tree = list(self.current_tree)
         ui_tree_elements = self.current_tree
         return (
             "Here is the full UI tree" + "\n".join(ui_tree_elements)
