@@ -1,4 +1,4 @@
-from models.ollama.model_definitions import ActorModel
+from models.model_definitions import ActorModel
 from context_provider import ContextProvider
 
 import utils.utils as utils

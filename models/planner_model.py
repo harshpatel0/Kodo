@@ -4,7 +4,7 @@ root = rootutils.setup_root(__file__, pythonpath=True)
 
 import json
 from context_provider import ContextProvider
-from models.ollama.model_definitions import PlannerModel, SkillInstallationMode
+from models.model_definitions import PlannerModel, SkillInstallationMode
 from skills.skill_orchestrator import Skills
 import utils.utils as utils
 from utils.logger import logger
