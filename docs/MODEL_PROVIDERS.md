@@ -26,7 +26,7 @@ You can mix providers arbitrarily, each role resolves its own provider independe
 
 ## Disclaimer
 
-By using an external provider, you agree to their terms of service.
+By using **any** provider, you agree to their terms of service.
 
 By providers, I mean any external provders, local providers, providers I included support for in the app, and the Ollama local provider.
 
