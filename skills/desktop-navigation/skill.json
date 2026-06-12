@@ -1,0 +1,7 @@
+{
+  "name": "desktop-navigation",
+  "description": "Windows Desktop navigation - teaches how to check the active window, switch to running apps, and launch pinned taskbar items efficiently.",
+  "enabled": true,
+  "actions": [""],
+  "entry": ""
+}
