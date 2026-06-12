@@ -8,6 +8,7 @@ class Settings:
     orchestrator: Any
     context_provider: Any
     models: Any
+    model_providers: Any
 
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
