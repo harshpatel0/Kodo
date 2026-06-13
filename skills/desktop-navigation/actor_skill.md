@@ -274,14 +274,6 @@ apps, volume, network, clock, etc.
 Contains quick settings toggles (Wi-Fi, Bluetooth, Focus Assist, etc.) and
 notifications. Click a toggle to change its state.
 
-### Volume Control
-
-```json
-{"action": "press_hotkey", "keys": ["win", "v"], "history": "Opened volume flyout"}
-```
-
-Navigate with Tab/Arrow keys to change volume slider.
-
 ---
 
 ## CONTEXT MENUS
