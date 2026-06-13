@@ -210,8 +210,7 @@ class Skills:
                 f"[Skill Orchestrator] No skill registered for action '{action_name}'"
             )
 
-        # Pass everything except 'action' key as args
-        args = {k: v for k, v in action.items() if k != "action"}
+        args = action
 
         return self._runner.run_skill_by_path(entry, args)
 
