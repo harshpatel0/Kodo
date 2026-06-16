@@ -126,7 +126,7 @@ autonomy_orchestrator.run_skill_installation_mode()
 autonomy_orchestrator.run()
 ```
 
-Define the settings in `settings.json` on the mode you would like to use under `settings > orchestrator > use_experimental_autonomy_mode`
+Define the settings in `settings.json` on the mode you would like to use under `settings > orchestrator > use_autonomy_mode`
 
 Then:
 
@@ -209,7 +209,7 @@ On first run, LMControl writes a `settings.json` to the project root using the d
   },
   "orchestrator": {
     "action_settle_time": 4,
-    "use_experimental_autonomy_mode": false,
+    "use_autonomy_mode": false,
 
     "planner_architecture": {
       "max_iterations_per_step": 10,
@@ -252,7 +252,7 @@ On first run, LMControl writes a `settings.json` to the project root using the d
 | `models.autonomy_actor.keep_alive` | `150` | Autonomy mode runs many more iterations than planner-actor mode, so keeping the model loaded longer is worth it. |
 | `models.autonomy_actor.attach_screenshot_of_active_window` | `false` | Same as the actor screenshot setting, independently configurable for autonomy mode. |
 | `orchestrator.action_settle_time` | `4` | Seconds to wait after each action before reading the UI tree again. Reduce this if your apps respond fast. Increase it if the actor keeps acting before the UI has caught up. Applies to both orchestrators. |
-| `orchestrator.use_experimental_autonomy_mode` | `false` | Switches the entire system to Autonomy mode. Changes which model configs, system prompts, and orchestrator are used. |
+| `orchestrator.use_autonomy_mode` | `false` | Switches the entire system to Autonomy mode. Changes which model configs, system prompts, and orchestrator are used. |
 | `orchestrator.planner_architecture.max_iterations_per_step` | `10` | How many times the actor can retry a single step before the run aborts. Each retry feeds the previous failure message back as context. |
 | `orchestrator.planner_architecture.max_autonomy_steps` | `10` | Extra steps the `StepOrchestrator` can take after the plan runs out, in its built-in fallback autonomy phase. |
 | `orchestrator.planner_architecture.max_replan_loop` | `7` | If the actor replans to the same instruction this many times in a row, it's flagged as a loop and the run is killed. |
