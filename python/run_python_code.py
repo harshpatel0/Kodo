@@ -123,8 +123,12 @@ class PythonRunner:
             logger.info(f"Output: {output}")
             logger.warning(f"Errors: {errors}")
 
-            if errors:
+            if not errors:
+                errors = "No errors"
+            else:
                 logger.warning(f"stderr: {errors}\nstdout: {output}")
+
+            if errors != "No errors":
                 result = "ERROR"
             else:
                 result = "SUCCESS"
@@ -132,8 +136,8 @@ class PythonRunner:
 
             return {"result": result, "stderr": errors, "stdout": output}
 
-        except subprocess.TimeoutExpired:
-            return {"result": "TIMEOUT", "stderr": errors, "stdout": output}
+        except subprocess.TimeoutExpired as e:
+            return {"result": "TIMEOUT", "stderr": e.stderr.strip() if e.stderr else "No errors", "stdout": e.stdout.strip() if e.stdout else ""}
 
         except Exception as e:
             return {"result": "PY_EXCEPTION", "stderr": str(e), "stdout": output}
