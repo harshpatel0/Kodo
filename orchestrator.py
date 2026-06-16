@@ -364,9 +364,10 @@ class AutonomyOrchestrator:
             # Truncate history to prevent unbounded context growth
             truncated_history = self._truncate_history(self.history)
 
+            max_iter = settings.orchestrator.autonomy_orchestrator.max_total_iterations
+
             logger.info(f"""
-Running iteration {self.iterations} out of {settings.orchestrator.autonomy_orchestrator.max_total_iterations}
-Enforcing Iteration Limit: {settings.orchestrator.autonomy_orchestrator.enforce_max_total_iterations}
+Running iteration {self.iterations} out of {max_iter}
 
 Task = {self.task}
 
@@ -386,12 +387,8 @@ Available Skill Actions:
 {self.skill_orchestrator.list_actions()}
 """)
 
-            if settings.orchestrator.autonomy_orchestrator.enforce_max_total_iterations:
-                if (
-                    self.iterations
-                    >= settings.orchestrator.autonomy_orchestrator.max_total_iterations
-                ):
-                    self.hard_exit = True
+            if max_iter > 0 and self.iterations >= max_iter:
+                self.hard_exit = True
 
             last_action_info = ""
             if getattr(self, "step_result", {}) and self.step_result.get("action"):
@@ -400,13 +397,17 @@ Available Skill Actions:
                     f"args={{{', '.join(f'{k}={v!r}' for k, v in self.step_result.items() if k != 'action')}}}\n"
                 )
 
+            punishment_tally = None
+            if max_iter > 0:
+                punishment_tally = f"Iteration {self.iterations} out of maximum {max_iter}\n{last_action_info}"
+
             try:
                 self.step_result = actor_model.do_step(
                     task=self.task,
                     additional_context=self.additional_context,
                     skills=self.skills,
                     runtime_skills=self.runtime_skills,
-                    punishment_tally=f"Iteration {self.iterations} out of maximum {settings.orchestrator.autonomy_orchestrator.max_total_iterations}\n{last_action_info}",
+                    punishment_tally=punishment_tally,
                     history=self.history,
                     available_skill_actions=self.skill_orchestrator.list_actions(),
                 )

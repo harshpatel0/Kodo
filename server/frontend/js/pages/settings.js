@@ -41,7 +41,6 @@ const FIELDS = [
   { id: 'cfg-max-iter-per-step',       path: 'orchestrator.planner_architecture.max_iterations_per_step',type: 'number' },
   { id: 'cfg-max-autonomy-steps',      path: 'orchestrator.planner_architecture.max_autonomy_steps',     type: 'number' },
   { id: 'cfg-max-replan-loop',         path: 'orchestrator.planner_architecture.max_replan_loop',        type: 'number' },
-  { id: 'cfg-enforce-max-iter',        path: 'orchestrator.autonomy_orchestrator.enforce_max_total_iterations', type: 'bool' },
   { id: 'cfg-max-total-iter',          path: 'orchestrator.autonomy_orchestrator.max_total_iterations',  type: 'number' },
 
   // Context provider

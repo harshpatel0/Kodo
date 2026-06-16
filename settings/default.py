@@ -54,7 +54,6 @@ default_settings = {
             "max_replan_loop": 7,
         },
         "autonomy_orchestrator": {
-            "enforce_max_total_iterations": True,
             "max_total_iterations": 50,
         },
     },
