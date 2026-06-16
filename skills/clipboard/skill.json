@@ -1,0 +1,6 @@
+{
+  "name": "clipboard",
+  "description": "Read from and write text to the Windows clipboard.",
+  "actions": ["clipboard_read", "clipboard_write"],
+  "entry": "skill.py"
+}
