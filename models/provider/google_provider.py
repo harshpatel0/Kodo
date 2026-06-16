@@ -4,7 +4,7 @@ from settings.settings import settings
 
 DO_THINKING = False
 
-if settings.orchestrator.use_experimental_autonomy_mode:
+if settings.orchestrator.use_autonomy_mode:
     if settings.models.autonomy_actor.thinking:
         DO_THINKING = True
 else:

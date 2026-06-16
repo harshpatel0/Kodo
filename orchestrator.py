@@ -519,7 +519,7 @@ Output of Iteration: {self.iterations}
 
 
 def run_externally(task: str, mode_override: str | None = None):
-    is_using_autonomy_mode = settings.orchestrator.use_experimental_autonomy_mode
+    is_using_autonomy_mode = settings.orchestrator.use_autonomy_mode
 
     if mode_override:
         if mode_override == "planner-actor":

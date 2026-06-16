@@ -19,7 +19,7 @@ context_provider = ContextProvider()
 ui_tree_handler = UITreeHandler()
 
 
-USING_AUTONOMY_MODE = settings.orchestrator.use_experimental_autonomy_mode
+USING_AUTONOMY_MODE = settings.orchestrator.use_autonomy_mode
 
 
 def _get_actor_config():
@@ -77,7 +77,9 @@ class SkillInstallationMode:
         )
 
         raw_content = response.content if response else ""
-        skills_data, _ = utils.try_parse_json(raw_content) if raw_content else ({}, None)
+        skills_data, _ = (
+            utils.try_parse_json(raw_content) if raw_content else ({}, None)
+        )
         skills_data = skills_data or {}
         skills = skills_data.get("skills", [])
 

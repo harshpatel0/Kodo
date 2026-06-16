@@ -47,7 +47,7 @@ default_settings = {
     },
     "orchestrator": {
         "action_settle_time": 4,
-        "use_experimental_autonomy_mode": False,
+        "use_autonomy_mode": True,
         "planner_architecture": {
             "max_iterations_per_step": 10,
             "max_autonomy_steps": 10,

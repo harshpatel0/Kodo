@@ -37,7 +37,7 @@ const FIELDS = [
 
   // Orchestrator
   { id: 'cfg-settle-time',             path: 'orchestrator.action_settle_time',                          type: 'number' },
-  { id: 'cfg-use-autonomy',            path: 'orchestrator.use_experimental_autonomy_mode',              type: 'bool' },
+  { id: 'cfg-use-autonomy',            path: 'orchestrator.use_autonomy_mode',              type: 'bool' },
   { id: 'cfg-max-iter-per-step',       path: 'orchestrator.planner_architecture.max_iterations_per_step',type: 'number' },
   { id: 'cfg-max-autonomy-steps',      path: 'orchestrator.planner_architecture.max_autonomy_steps',     type: 'number' },
   { id: 'cfg-max-replan-loop',         path: 'orchestrator.planner_architecture.max_replan_loop',        type: 'number' },
