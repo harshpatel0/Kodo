@@ -147,7 +147,8 @@ What provider would you like to use?
             "ollama": (
                 "Enter the Ollama model name you want to use.\n"
                 "Recommended: qwen2.5-coder:14b (good all-rounder) or qwen2.5:7b (lightweight)\n"
-                "You can also use: llama3.2:3b, deepseek-coder-v2, gemma4:e4b"
+                "You can also use: llama3.2:3b, deepseek-coder-v2, gemma4:e4b\n"
+                "Ensure you pull the model first, otherwise an exception will be thrown"
             ),
             "anthropic": (
                 "Enter the Anthropic model name.\n"
