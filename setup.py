@@ -154,9 +154,7 @@ What provider would you like to use?
                 "             [H]aiku 3-5 (claude-haiku-3-5)"
             ),
             "google": (
-                # FIX: corrected model name from gemini-3.1-flash-lite (does not exist)
-                "Enter the Google model name.\n"
-                "Recommended: gemini-2.5-flash-lite"
+                "Enter the Google model name.\n" "Recommended: gemini-3.1-flash-lite"
             ),
         }
 
@@ -356,11 +354,11 @@ Refer to existing skills as examples — they all follow the same pattern.
         venv_path = Path("venv")
         venv_python = venv_path / "Scripts" / "python.exe"
 
-        print(f'\nCreating virtual environment: "venv"')
+        print(f'\nCreating virtual environment: "venv"\nThis may take a while')
         venv.create(venv_path, with_pip=True)
         print("Virtual environment created.\n")
 
-        print("Installing dependencies from requirements.txt...")
+        print("Installing dependencies from requirements.txt...\nThis may take a while")
         result = subprocess.run(
             [str(venv_python), "-m", "pip", "install", "-r", "requirements.txt"],
             capture_output=True,
