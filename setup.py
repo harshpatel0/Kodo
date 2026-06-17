@@ -26,6 +26,7 @@ class KodoSetup:
 
         self.set_model_names()
         self.set_thinking()
+        self.set_screenshot_setting()
 
         if self.user_using_provider == "anthropic":
             self.set_anthropic_effort()
@@ -213,6 +214,7 @@ You can always change this per-model in settings.json under models > [role] > th
                 .lower()
                 .strip()
             )
+
             if choice == "y":
                 thinking = True
                 break
@@ -231,9 +233,9 @@ You can always change this per-model in settings.json under models > [role] > th
         print("-" * 40)
         print("""
 Anthropic supports different effort levels for thinking / extended thinking:
-    [L]ow (Recommended) — fast and cost-effective
-    [M]edium — balanced
-    [H]igh — best for complex reasoning, most expensive
+    [L]ow (Recommended) - fast and cost-effective
+    [M]edium - balanced
+    [H]igh - best for complex reasoning, most expensive
 
 This is stored in model_providers > anthropic > effort.
 """)
@@ -255,6 +257,48 @@ This is stored in model_providers > anthropic > effort.
 
         print(
             f"  Effort set to: {self.default_settings['model_providers']['anthropic']['effort']}\n"
+        )
+
+    def set_screenshot_setting(self):
+        print("Attach Screenshot of Active Window")
+        print("-" * 40)
+        print("""
+Attaching screenshots allow the LLM to visually see your screen and make judgements based on it.
+However this also means that the LLM, and if the LLM provider will review your work.
+Screenshots are only limited to the active window
+
+DISCLAIMER: If you are using Anthropic or Google, enabling screenshots will incur
+additional API charges beyond normal token costs. With Ollama (local) there is
+no monetary cost, but responses will take longer.
+Your screenshots also apply to the provider's privacy policy, the same way your inputs and context do.
+
+Screenshots are recommended
+""")
+
+        while True:
+            choice = (
+                input(
+                    "Enable screenshots for Actor and Autonomy Modes? ([Y]es / [N]o): "
+                )
+                .lower()
+                .strip()
+            )
+
+            if choice == "y":
+                screenshot = True
+                break
+            if choice == "n":
+                screenshot = False
+                break
+            print("Please enter 'y' or 'n'")
+
+        for key in ("actor", "autonomy_actor"):
+            self.default_settings["models"][key][
+                "attach_screenshot_of_active_window"
+            ] = screenshot
+
+        print(
+            f"  Attaching Screenshots of Active Window set to: {'enabled' if screenshot else 'disabled'}\n"
         )
 
     def setup_orchestrator(self):
