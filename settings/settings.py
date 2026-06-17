@@ -1,7 +1,8 @@
 import json
 from types import SimpleNamespace
-from settings.default import default_settings
 from typing import Any
+
+from settings.default import default_settings
 
 
 class Settings:
@@ -27,7 +28,19 @@ class Settings:
                 data = json.load(f)
         except FileNotFoundError:
             data = default_settings
+            with open(self.file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            return data
 
+        missing_keys = [key for key in default_settings if key not in data]
+
+        if missing_keys:
+            print(
+                f"[Settings] Warning: settings.json is missing keys: {missing_keys}. "
+                "Filling in from defaults."
+            )
+            for key in missing_keys:
+                data[key] = default_settings[key]
             with open(self.file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
 
