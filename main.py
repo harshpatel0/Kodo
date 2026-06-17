@@ -1,6 +1,9 @@
 import os
 import subprocess
 import sys
+import threading
+import time
+import webbrowser
 from pathlib import Path
 
 from utils.globals import API_BIND_TO_ALL_IPS, API_PORT
@@ -20,20 +23,29 @@ def _run_under_venv():
         return False
     if os.path.abspath(sys.executable) == os.path.abspath(str(venv_python)):
         return False
+
     sys.exit(subprocess.call([str(venv_python)] + sys.argv))
-    return True
+
+
+def _open_browser_delayed(url: str, delay: float = 1.5):
+    def _open():
+        time.sleep(delay)
+        webbrowser.open_new(url)
+
+    threading.Thread(target=_open, daemon=True).start()
 
 
 if __name__ == "__main__":
     if not Path("initialised.txt").exists():
         from setup import KodoSetup
 
-        KodoSetup().run_setup_sequence()
+        setup = KodoSetup()
+        setup.check_system_compatibility()
+        setup.run_setup_sequence()
 
     _run_under_venv()
 
     import uvicorn
-    import webbrowser
 
-    webbrowser.open_new(f"http://127.0.0.1:{API_PORT}")
+    _open_browser_delayed(f"http://127.0.0.1:{API_PORT}")
     uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
