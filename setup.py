@@ -1,3 +1,4 @@
+import copy
 import json
 import subprocess
 import sys
@@ -9,7 +10,7 @@ from settings.default import default_settings
 
 class KodoSetup:
     def __init__(self) -> None:
-        self.default_settings = default_settings
+        self.default_settings = copy.deepcopy(default_settings)
 
     def check_system_compatibility(self):
         if sys.platform != "win32":
@@ -17,6 +18,7 @@ class KodoSetup:
             sys.exit(1)
 
     def run_setup_sequence(self):
+        self.check_system_compatibility()
         self.introduction()
 
         self.set_model_provider()
@@ -72,29 +74,23 @@ What provider would you like to use?
             user_provider = input("Provider: ").lower()
 
             if user_provider == "o":
-                default_settings["active_model_provider"] = "ollama"
-
+                self.default_settings["active_model_provider"] = "ollama"
                 for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
-                    default_settings["models"][key]["provider"] = "ollama"
-
+                    self.default_settings["models"][key]["provider"] = "ollama"
                 self.user_using_provider = "ollama"
                 break
 
             if user_provider == "a":
-                default_settings["active_model_provider"] = "anthropic"
-
+                self.default_settings["active_model_provider"] = "anthropic"
                 for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
-                    default_settings["models"][key]["provider"] = "anthropic"
-
+                    self.default_settings["models"][key]["provider"] = "anthropic"
                 self.user_using_provider = "anthropic"
                 break
 
             if user_provider == "g":
-                default_settings["active_model_provider"] = "google"
-
+                self.default_settings["active_model_provider"] = "google"
                 for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
-                    default_settings["models"][key]["provider"] = "google"
-
+                    self.default_settings["models"][key]["provider"] = "google"
                 self.user_using_provider = "google"
                 break
 
@@ -103,26 +99,42 @@ What provider would you like to use?
     def setup_model_provider(self, provider: str):
         if provider == "ollama":
             print(
-                "Type the Ollama IP Addresses and Port, this is the server that is currently serving an Ollama Instance\nIf it is your current PC, leave the field blank"
+                "Type the Ollama IP Address and Port of the server running your Ollama instance.\n"
+                "If it is on this PC, leave the field blank."
             )
-            ollama_url = input("Ollama IP Address and Port: ")
-
-            if ollama_url == "":
+            ollama_url = input("Ollama IP Address and Port: ").strip()
+            if not ollama_url:
                 ollama_url = "localhost:11434"
-
-            default_settings["model_providers"]["ollama"]["server_url"] = ollama_url
+            self.default_settings["model_providers"]["ollama"][
+                "server_url"
+            ] = ollama_url
 
         if provider == "anthropic":
-            anthropic_api_key = input("Type your Anthropic API key: ")
-
-            with open(".env", "w") as env_file:
-                env_file.write("ANTHROPIC_API_KEY = " + anthropic_api_key)
+            anthropic_api_key = input("Type your Anthropic API key: ").strip()
+            self._write_env_key("ANTHROPIC_API_KEY", anthropic_api_key)
 
         if provider == "google":
-            google_api_key = input("Type your Google AI API key: ")
+            google_api_key = input("Type your Google AI API key: ").strip()
+            self._write_env_key("GOOGLE_API_KEY", google_api_key)
 
-            with open(".env", "w") as env_file:
-                env_file.write("GOOGLE_API_KEY = " + google_api_key)
+    def _write_env_key(self, key: str, value: str):
+        """Write or update a single key in the .env file without clobbering other keys."""
+        env_path = Path(".env")
+        lines = []
+        if env_path.exists():
+            lines = env_path.read_text(encoding="utf-8").splitlines()
+
+        # Replace existing key if present, otherwise append
+        key_found = False
+        for i, line in enumerate(lines):
+            if line.startswith(f"{key} =") or line.startswith(f"{key}="):
+                lines[i] = f"{key} = {value}"
+                key_found = True
+                break
+        if not key_found:
+            lines.append(f"{key} = {value}")
+
+        env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def set_model_names(self):
         provider = self.user_using_provider
@@ -138,11 +150,13 @@ What provider would you like to use?
             ),
             "anthropic": (
                 "Enter the Anthropic model name.\n"
-                "Recommended: [C]laude Sonnet 4-6 (claude-sonnet-4-20250514)\n"
-                "             [H]aiku 4-5 (claude-haiku-4-20250507)"
+                "Recommended: [C]laude Sonnet 4-5 (claude-sonnet-4-5)\n"
+                "             [H]aiku 3-5 (claude-haiku-3-5)"
             ),
             "google": (
-                "Enter the Google model name.\n" "Recommended: gemini-3.1-flash-lite"
+                # FIX: corrected model name from gemini-3.1-flash-lite (does not exist)
+                "Enter the Google model name.\n"
+                "Recommended: gemini-2.5-flash-lite"
             ),
         }
 
@@ -156,26 +170,26 @@ What provider would you like to use?
                     .strip()
                 )
                 if anthro_choice == "c":
-                    model_name = "claude-sonnet-4-20250514"
+                    model_name = "claude-sonnet-4-5"
                     break
                 if anthro_choice == "h":
-                    model_name = "claude-haiku-4-20250507"
+                    model_name = "claude-haiku-3-5"
                     break
                 if anthro_choice:
                     model_name = anthro_choice
                     break
                 print("Please make a selection")
+
+        elif provider == "google":
+            model_input = input("Model name: ").strip()
+            model_name = model_input if model_input else "gemini-3.1-flash-lite"
+
         else:
             model_input = input("Model name: ").strip()
-            if model_input:
-                model_name = model_input
-            elif provider == "google":
-                model_name = "gemini-3.1-flash-lite"
-            else:
-                model_name = "qwen2.5-coder:14b"
+            model_name = model_input if model_input else "qwen2.5-coder:14b"
 
         for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
-            default_settings["models"][key]["model_name"] = model_name
+            self.default_settings["models"][key]["model_name"] = model_name
 
         print(f"  Using model: {model_name}\n")
 
@@ -210,7 +224,7 @@ You can always change this per-model in settings.json under models > [role] > th
             print("Please enter 'y' or 'n'")
 
         for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
-            default_settings["models"][key]["thinking"] = thinking
+            self.default_settings["models"][key]["thinking"] = thinking
 
         print(f"  Thinking set to: {'enabled' if thinking else 'disabled'}\n")
 
@@ -229,18 +243,20 @@ This is stored in model_providers > anthropic > effort.
         while True:
             choice = input("Effort level ([L]ow / [M]edium / [H]igh): ").lower().strip()
             if choice == "l":
-                default_settings["model_providers"]["anthropic"]["effort"] = "low"
+                self.default_settings["model_providers"]["anthropic"]["effort"] = "low"
                 break
             if choice == "m":
-                default_settings["model_providers"]["anthropic"]["effort"] = "medium"
+                self.default_settings["model_providers"]["anthropic"][
+                    "effort"
+                ] = "medium"
                 break
             if choice == "h":
-                default_settings["model_providers"]["anthropic"]["effort"] = "high"
+                self.default_settings["model_providers"]["anthropic"]["effort"] = "high"
                 break
             print("Please enter 'l', 'm', or 'h'")
 
         print(
-            f"  Effort set to: {default_settings['model_providers']['anthropic']['effort']}\n"
+            f"  Effort set to: {self.default_settings['model_providers']['anthropic']['effort']}\n"
         )
 
     def setup_orchestrator(self):
@@ -265,7 +281,7 @@ Choose your orchestrator, you can always change this in the settings.json file u
     [A]utonomy Mode (Recommended)
 """)
         while True:
-            user_choice = input("").lower()
+            user_choice = input("").lower().strip()
 
             if user_choice == "p":
                 self.default_settings["orchestrator"]["use_autonomy_mode"] = False
@@ -299,7 +315,7 @@ Enter any positive number to cap the total iterations.
             except Exception:
                 print("Iteration Limits can only be a number")
 
-        default_settings["orchestrator"]["autonomy_orchestrator"][
+        self.default_settings["orchestrator"]["autonomy_orchestrator"][
             "max_total_iterations"
         ] = user_limits
         print(f"  Max total iterations set to: {user_limits}\n")
@@ -333,14 +349,14 @@ Refer to existing skills as examples — they all follow the same pattern.
 
     def save_settings(self):
         with open("settings.json", "w", encoding="utf-8") as f:
-            json.dump(default_settings, f, indent=2)
+            json.dump(self.default_settings, f, indent=2)
         print("\nSettings saved to settings.json")
 
     def create_venv_and_install_deps(self):
         venv_path = Path("venv")
         venv_python = venv_path / "Scripts" / "python.exe"
 
-        print(f"\nCreating virtual environment: {"venv"}")
+        print(f'\nCreating virtual environment: "venv"')
         venv.create(venv_path, with_pip=True)
         print("Virtual environment created.\n")
 
