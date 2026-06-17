@@ -23,6 +23,12 @@ class AnthropicProvider(ModelProvider):
     def __init__(
         self, api_key_env_var: str = "ANTHROPIC_API_KEY", base_url: str | None = None
     ):
+        try:
+            import anthropic as _anthropic
+        except ImportError:
+            raise ImportError(
+                "Anthropic-SDK is not installed. Run: pip install anthropic"
+            )
 
         api_key = os.environ.get(api_key_env_var)
         if not api_key:
