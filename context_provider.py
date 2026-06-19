@@ -137,7 +137,8 @@ class ContextProvider:
                     f"{ctrl_type} | name='{element_name}' | x={target_x} y={target_y}"
                 )
 
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Skipped element due to an exception: {e}")
                 continue
 
         logger.debug(f"Final scan found {len(elements)} elements.")
