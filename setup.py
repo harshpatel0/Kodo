@@ -261,12 +261,12 @@ This is stored in model_providers > anthropic > effort.
         )
 
     def set_screenshot_setting(self):
-        print("Attach Screenshot of Active Window")
+        print("Attach Screenshot of your PC")
         print("-" * 40)
         print("""
 Attaching screenshots allow the LLM to visually see your screen and make judgements based on it.
 However this also means that the LLM, and if the LLM provider will review your work.
-Screenshots are only limited to the active window
+Screenshots are set to your entire PC by default, but you can change this in settings > context_provider > take_full_screen_screenshot
 
 DISCLAIMER: If you are using Anthropic or Google, enabling screenshots will incur
 additional API charges beyond normal token costs. With Ollama (local) there is
