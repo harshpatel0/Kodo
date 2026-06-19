@@ -97,8 +97,7 @@ class GoogleProvider(ModelProvider):
 
         if DO_THINKING:
             config_kwargs["thinking_config"] = types.ThinkingConfig(
-                thinking_budget=-1,
-                include_thoughts=False,  # set True if you want to log the reasoning
+                thinking_budget=-1, include_thoughts=True
             )
 
         config = types.GenerateContentConfig(**config_kwargs)
@@ -137,7 +136,21 @@ class GoogleProvider(ModelProvider):
         except Exception:
             input_tokens = output_tokens = 0
 
-        text = response.text.strip() if response.text else ""
+        # text = response.text.strip() if response.text else ""
+
+        text = ""
+        thinking = ""
+
+        for part in response.candidates[0].content.parts:
+            if part.thought:
+                thinking = part.text
+            else:
+                text += part.text
+
+        text = text.strip()
+
+        if thinking:
+            logger.debug(f"[GoogleProvider] Reasoning:\n{thinking}")
 
         return ChatResponse(
             content=text,
