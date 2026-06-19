@@ -21,7 +21,7 @@ This is a project I started making on my own with no scope planning or safety de
 - [Project Structure](#project-structure)
 - [Installation](#installation)
 - [Setup](#setup)
-- [Running Kodo](#running-Kodo)
+- [Running Kodo](#running-kodo)
 - [Modes](#modes)
 - [Settings](#settings)
 - [Model Recommendations](#model-recommendations)
@@ -115,7 +115,7 @@ You'll also need [Ollama](https://ollama.com) installed and at least one model p
 
 ---
 
-## Running Kodo 
+## Running Kodo
 
 ### Using the Web API
 
@@ -124,6 +124,22 @@ Kodo exposes an API, make sure all dependencies are installed and then run the m
 > If the Live Desktop Preview does not show up, refresh the page.
 
 ### Directly
+
+The main file accepts a `-t` flag, run
+
+``` bash
+py main.py -t your task here
+```
+
+e.g.,
+
+``` bash
+py main.py -t Send a Toast Notification with my current OS Version
+```
+
+This will run your task directly and quit once the LLM invokes the `done` action, using your settings.json file
+
+### You can do this too, if you want to
 
 Open `orchestrator.py` and set your task at the bottom of the file. There are two modes, covered in the next section.
 

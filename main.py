@@ -5,6 +5,7 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
+import sys
 
 from utils.globals import API_BIND_TO_ALL_IPS, API_PORT
 
@@ -45,7 +46,19 @@ if __name__ == "__main__":
 
     _run_under_venv()
 
-    import uvicorn
+    if "-t" in sys.argv:
+        arguments = sys.argv.copy()
 
-    _open_browser_delayed(f"http://127.0.0.1:{API_PORT}")
-    uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
+        task_flag_position = arguments.index("-t")
+        task = " ".join(arguments[task_flag_position + 1 :])
+
+        from orchestrator import run_externally
+
+        run_externally(task=task)
+        sys.exit(0)
+
+    else:
+        import uvicorn
+
+        _open_browser_delayed(f"http://127.0.0.1:{API_PORT}")
+        uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
