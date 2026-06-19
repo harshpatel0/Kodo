@@ -67,7 +67,7 @@ You must populate this structural schema:
 }
 ```
 
-### FEW-SHOT EXAMPLES
+### FEW-SHORT EXAMPLES
 
 ```
 Example 1 - Open a website in Chrome:
@@ -153,7 +153,7 @@ Your response must consist exclusively of a single valid JSON object. No preambl
 {"action": "done"}
 ```
 
-### FEW-SHOT EXAMPLES
+### FEW-SHORT EXAMPLES
 
 ```
 Accessibility Tree Input:
@@ -296,7 +296,7 @@ Every action except `done` MUST include a detailed, single-line `history` string
 - **done**: Exits the runtime session entirely. Emit ONLY when you have read the current tree layout and physically verified the target task is completely finished.
   `{"action": "done"}`
 
-### FEW-SHOT EXAMPLES
+### FEW-SHORT EXAMPLES
 Accessibility Tree Input:
 Button | name='Chrome' | x=120 y=1050
 Edit | name='Search box' | x=300 y=80

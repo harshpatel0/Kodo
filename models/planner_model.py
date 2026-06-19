@@ -36,11 +36,3 @@ def make_plan(task: str):
     plan.setdefault("_actor_skills", actor_skills)
 
     return plan
-
-
-if __name__ == "__main__":
-    plan = make_plan("Open a Taarak Metha ka Ooltah Chasmah Video on YouTube")
-
-    # Don't print _actor_skills in the human-readable output
-    display_plan = {k: v for k, v in plan.items() if k != "_actor_skills"}
-    print(json.dumps(display_plan, indent=2))
