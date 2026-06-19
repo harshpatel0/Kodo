@@ -277,6 +277,8 @@ class StepOrchestrator:
                         punishment_tally=f"Iteration {iterations}/{MAX_ITERATIONS_PER_STEP} for this step\n{last_action_info}",
                         skills=self.skills,
                     )
+                except KeyboardInterrupt:
+                    exit(1)
                 except Exception as e:
                     logger.error(f"Step execution failed: {e}")
                     self.step_result = {
@@ -409,6 +411,8 @@ Available Skill Actions:
                     history=self.history,
                     available_skill_actions=self.skill_orchestrator.list_actions(),
                 )
+            except KeyboardInterrupt:
+                exit(1)
             except Exception as e:
                 logger.error(f"Autonomy step failed: {e}")
                 self.step_result = {
