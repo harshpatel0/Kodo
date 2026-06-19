@@ -26,29 +26,12 @@ class PCActions:
     def press_key(self, key):
         pyautogui.press(keys=key)
 
-    def drag(self, from_x, from_y, to_x, to_y, button, duration=0.5, steps=100):
+    def drag(self, from_x, from_y, to_x, to_y, button, duration=0.2):
 
         button = "primary" if button == "left" else "secondary"
 
         pyautogui.moveTo(from_x, from_y)
-        pyautogui.mouseDown(button=button)
-
-        start_time = time.time()
-
-        for i in range(steps + 1):
-            t = i / steps
-
-            current_x = from_x + (to_x - from_x) * t
-            current_y = from_y + (to_y - from_y) * t
-
-            pyautogui.moveTo(current_x, current_y)
-
-            elapsed = time.time() - start_time
-            target = t * duration
-            if target > elapsed:
-                time.sleep(target - elapsed)
-
-        pyautogui.mouseUp()
+        pyautogui.dragTo(to_x, to_y, duration=duration, button=button)
 
     def press_hotkey(self, hotkey):
         pyautogui.hotkey(*hotkey)
