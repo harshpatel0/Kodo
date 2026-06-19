@@ -173,7 +173,7 @@ Treat skill actions as first-class actions alongside the standard ones above.
 
 
 class ActorModel:
-    def __int__(self):
+    def __init__(self):
         self.system_prompt = ""
 
     def build_system_prompt_with_skills(self, skills=None, task=None):
