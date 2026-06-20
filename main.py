@@ -13,9 +13,12 @@ HOST = "127.0.0.1"
 if API_BIND_TO_ALL_IPS:
     HOST = "0.0.0.0"
 
+ROOT_DIR = Path(__file__).resolve().parent
+print(ROOT_DIR)
+
 
 def _venv_python() -> Path:
-    return Path("venv") / "Scripts" / "python.exe"
+    return ROOT_DIR / "venv" / "Scripts" / "python.exe"
 
 
 def _run_under_venv():
@@ -37,7 +40,7 @@ def _open_browser_delayed(url: str, delay: float = 3.5):
 
 
 if __name__ == "__main__":
-    if not Path("initialised.txt").exists():
+    if not Path(ROOT_DIR / "initialised.txt").exists():
         from setup import KodoSetup
 
         setup = KodoSetup()
