@@ -59,10 +59,15 @@ class ActionHandlers:
         return "BREAK"
 
     def handleStuck(self):
-        logger.info(
-            f"The Actor Model claims it is stuck, running another iteration with added context {self.orchestrator.iterations+1}/{MAX_ITERATIONS_PER_STEP}"
-        )
-        # Include diagnostic info: the last action attempted and its result.
+        if not self.in_autonomy:
+            logger.info(
+                f"The Actor Model claims it is stuck, running another iteration with added context {self.orchestrator.iterations+1}/{MAX_ITERATIONS_PER_STEP}"
+            )
+        else:
+            logger.info(
+                f"The Actor Model claims it is stuck, running another iteration with added context"
+            )
+
         last_action = self.orchestrator.step_result.get("action", "unknown")
         last_args = {
             k: v for k, v in self.orchestrator.step_result.items() if k != "action"
@@ -330,6 +335,7 @@ class AutonomyOrchestrator:
             "PROCEED": self.action_handler.handleProceed,
             "DONE": self.action_handler.handleDone,
             "RETRY": self.action_handler.handleRetry,
+            "STUCK": self.action_handler.handleStuck,
         }
 
     def run_skill_installation_mode(self):
