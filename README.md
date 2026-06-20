@@ -73,8 +73,8 @@ Kodo/
 ### Automated Setup
 
 ```bash
-git clone https://github.com/harshpatel0/lmcontrol.git
-cd lmcontrol
+git clone https://github.com/harshpatel0/Kodo.git
+cd Kodo
 py main.py
 ```
 
@@ -84,8 +84,8 @@ First launches will take longer as virtual environments and dependencies are ins
 ### Manual Installation
 
 ```bash
-git clone https://github.com/harshpatel0/lmcontrol.git
-cd lmcontrol
+git clone https://github.com/harshpatel0/Kodo.git
+cd Kodo
 pip install -r requirements.txt
 ```
 
@@ -111,7 +111,9 @@ You'll also need [Ollama](https://ollama.com) installed and at least one model p
 
    By default it runs on `localhost:11434`. If you're hosting Ollama elsewhere, update `ollama_server` in `settings.json` after the first run.
 
-3. Run `orchestrator.py` with a task and you're off.
+3. Run `main.py` with a task and you're off.
+
+> Ollama steps will only apply if you are using a local Ollama Model
 
 ---
 
