@@ -157,3 +157,6 @@ class _StdoutProxy(io.TextIOBase):
     @property
     def errors(self):
         return getattr(self._original, "errors", "strict")
+
+
+# This code is AI generated, please look at the Wiki for details on how to use it, the Wiki is in the GitHub repo under the Internal Dev Stuff page.
