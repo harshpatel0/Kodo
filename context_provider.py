@@ -13,6 +13,7 @@ from settings.settings import settings
 from utils.globals import (
     CONTEXT_PROVIDER_UI_DIFF_THRESHOLD_PERCENTAGE as THRESHOLD_PERCENTAGE,
     ALLOWED_CONTROL_TYPES,
+    CONTEXT_PROVIDER_FORCE_DIFF_ON_UNSUPPORTED_PROVIDERS,
 )
 
 
@@ -147,7 +148,7 @@ class ContextProvider:
         logger.debug(f"Final scan found {len(elements)} elements.")
         return elements
 
-    def get_active_window(self):
+    def get_active_window(self) -> str:
         try:
             active_window = gw.getActiveWindow()
             return active_window.title if active_window else "Desktop"
@@ -230,7 +231,7 @@ class ContextProvider:
         except Exception as e:
             return f"Could not read taskbar: {str(e)}"
 
-    def get_ui_tree(self):
+    def get_ui_tree(self) -> list:
         try:
             hwnd = win32gui.GetForegroundWindow()
             desktop = pywinauto.Desktop(backend="uia")
@@ -242,7 +243,7 @@ class ContextProvider:
             # return "\n".join(elements) if elements else "No UI elements found."
             return elements
         except Exception as e:
-            return f"Could not read UI tree: {str(e)}"
+            return []
 
 
 class UITreeHandler:
@@ -299,6 +300,18 @@ class UITreeHandler:
             )
             logger.debug(f"Returning full UI Tree (window changed)\n{return_message}")
             return return_message
+
+        # Always send the full tree if the provider is not Ollama
+
+        if (
+            settings.models.actor.provider != "ollama"
+            or settings.active_model_provider != "ollama"
+        ) and not CONTEXT_PROVIDER_FORCE_DIFF_ON_UNSUPPORTED_PROVIDERS:
+            self.current_tree = self.context_provider.get_ui_tree()
+            logger.debug(
+                "Diffed UI Trees are unsupported for the current provider, only Ollama supports diffed trees, the full tree is being sent"
+            )
+            return "Here is the full UI tree\n" + "\n".join(self.current_tree)
 
         added_items, removed_items = self._get_tree()
 

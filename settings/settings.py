@@ -11,6 +11,7 @@ class Settings:
     models: Any
     model_providers: Any
     skills: Any
+    active_model_provider: str
 
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
