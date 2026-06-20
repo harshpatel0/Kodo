@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 
-prompts_folder = Path(__file__).parent / "prompts"
+prompts_folder = Path(__file__).parent.parent / "prompts"
 
 
 def load_prompt(file: str):
@@ -16,7 +16,7 @@ def load_prompt(file: str):
 try:
     PLANNER_BASE_SYSTEM_PROMPT = load_prompt("planner.md")
     ACTOR_BASE_SYSTEM_PROMPT = load_prompt("actor.md")
-    SKILL_INSTALLATION_PROMPT = load_prompt("skill_selector.md")
+    SKILL_INSTALLATION_PROMPT = load_prompt("skill_installation.md")
     AUTONOMY_MODE_SYSTEM_PROMPT = load_prompt("autonomy.md")
 except FileNotFoundError as e:
     print(e, file=sys.__stdout__)
