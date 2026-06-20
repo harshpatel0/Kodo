@@ -14,7 +14,7 @@ if API_BIND_TO_ALL_IPS:
     HOST = "0.0.0.0"
 
 ROOT_DIR = Path(__file__).resolve().parent
-print(ROOT_DIR)
+os.chdir(ROOT_DIR)
 
 
 def _venv_python() -> Path:
