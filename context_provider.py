@@ -13,8 +13,13 @@ from settings.settings import settings
 from utils.globals import (
     CONTEXT_PROVIDER_UI_DIFF_THRESHOLD_PERCENTAGE as THRESHOLD_PERCENTAGE,
     ALLOWED_CONTROL_TYPES,
-    CONTEXT_PROVIDER_FORCE_DIFF_ON_UNSUPPORTED_PROVIDERS,
 )
+
+
+def _get_active_provider() -> str:
+    if settings.orchestrator.use_autonomy_mode:
+        return getattr(settings.models.autonomy_actor, "provider", "ollama")
+    return getattr(settings.models.actor, "provider", "ollama")
 
 
 class ContextProvider:
@@ -303,10 +308,7 @@ class UITreeHandler:
 
         # Always send the full tree if the provider is not Ollama
 
-        if (
-            settings.models.actor.provider != "ollama"
-            or settings.active_model_provider != "ollama"
-        ) and not CONTEXT_PROVIDER_FORCE_DIFF_ON_UNSUPPORTED_PROVIDERS:
+        if _get_active_provider != "ollama":
             self.current_tree = self.context_provider.get_ui_tree()
             logger.debug(
                 "Diffed UI Trees are unsupported for the current provider, only Ollama supports diffed trees, the full tree is being sent"
