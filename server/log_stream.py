@@ -19,7 +19,6 @@ import io
 import json
 from datetime import datetime
 
-# ── Sentinel: signals the queue is finished ──────────────────────────────────
 _DONE = object()
 
 
@@ -160,3 +159,40 @@ class _StdoutProxy(io.TextIOBase):
 
 
 # This code is AI generated, please look at the Wiki for details on how to use it, the Wiki is in the GitHub repo under the Internal Dev Stuff page.
+
+
+class WebEmitter:
+    def __init__(self):
+        self._stream: LogStream | None = None
+
+    def attach(self, stream: LogStream):
+        self._stream = stream
+
+    def detach(self):
+        self._stream = None
+
+    def thinking(self, text: str):
+        self._emit("thinking", {"text": text})
+
+    def action(self, data: dict):
+        self._emit("action", data)
+
+    def history(self, data: list):
+        self._emit("history", {"entries": data})
+
+    def metrics(self, data: dict):
+        self._emit("metrics", data)
+
+    def plan(self, data: dict):
+        self._emit("planner_plan", data)
+
+    def _emit(self, type: str, data):
+        if self._stream:
+            self._stream.put(
+                {"type": type, "data": data, "ts": datetime.utcnow().isoformat()}
+            )
+
+
+web_emitter = WebEmitter()
+
+# The WebEmitter will be used by frontends to display Kodo's progress without needing to handle the actual logger

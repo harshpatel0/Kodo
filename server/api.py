@@ -1,12 +1,11 @@
 from utils.globals import (
-    API_BIND_TO_ALL_IPS,
     API_DESKTOP_STREAMING_FRAME_RATE,
     API_DESKTOP_STREAMING_PICTURE_QUALITY,
     API_PORT,
 )
 
 
-from server.log_stream import LogStream
+from server.log_stream import LogStream, web_emitter
 import asyncio
 import rootutils
 import json
@@ -119,13 +118,17 @@ async def run(websocket: WebSocket, task: str, mode_override: str | None = None)
         # Capture the OS thread ID before doing any work
         thread_id_holder.append(threading.current_thread().ident)
         loop.call_soon_threadsafe(thread_id_ready.set)
+
         stream.attach()
+        web_emitter.attach(stream)
+
         try:
             run_externally(task=task, mode_override=mode_override)
         except SystemExit:
             pass  # clean exit from _kill_thread
         finally:
             stream.detach()
+            web_emitter.detach()
 
     future = loop.run_in_executor(
         None, _run_with_stream_and_id, task, mode_override, stream
