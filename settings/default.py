@@ -67,4 +67,5 @@ default_settings = {
     "skills": {
         "skill_timeout": 0,
     },
+    "web_ui": {"expose_web_ui_to_all_devices_on_the_network": False},
 }

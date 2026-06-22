@@ -23,6 +23,8 @@ from fastapi import status as ws_status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from orchestrator import run_externally
 from settings.settings import settings
@@ -37,6 +39,14 @@ import ctypes
 import threading
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 from pathlib import Path
 
@@ -184,7 +194,7 @@ async def desktop_feed():
 def main():
     import uvicorn
 
-    if API_BIND_TO_ALL_IPS:
+    if settings.web_ui.expose_web_ui_to_all_devices_on_the_network:
         host = "0.0.0.0"
     else:
         host = "127.0.0.1"
