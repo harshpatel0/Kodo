@@ -37,6 +37,8 @@ import numpy as np
 import ctypes
 import threading
 
+from utils.loading_text import get_loading_text
+
 app = FastAPI()
 
 app.add_middleware(
@@ -192,6 +194,11 @@ async def desktop_feed():
     return StreamingResponse(
         capture_desktop(), media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+
+@app.get("/loading-text")
+async def return_loading_text():
+    return get_loading_text()
 
 
 def main():
