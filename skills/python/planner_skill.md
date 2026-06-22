@@ -1,45 +1,18 @@
 # Python Engine — Planner Guide
 
-## Action Format
-
-```
-instruction: python | code=<< code string here>>
-```
-
-All dependencies are auto-installed. Code runs in an isolated venv.
-
 ## When to Use
+Use `python` for process launching, system queries, data transformation, calculations, or anything faster in code than via UI. Do NOT use if a loaded skill or accessibility tree action can do it.
 
-Use `python` instead of UI steps for:
-
-- File operations (create, move, delete, check existence)
-- Process launching or system state queries
-- Data transformation, calculations, string formatting
-- Anything faster or more reliable done in code than via the UI
-
-Do NOT use for anything the actor can do directly via the accessibility tree.
+## Action Format
+```
+instruction: "python | code=import subprocess; subprocess.Popen(['notepad.exe'])"
+expected_result: "[Verifiable system state — not script output. E.g. 'Notepad is the active foreground window']"
+fallback: "[UI-based alternative using click/type/hotkey]"
+```
 
 ## Rules
-
-- One script per step. Keep code self-contained.
-- Write the actual code in the instruction — never describe what it should do.
-- Chain statements with semicolons on a single line.
-- `expected_result` must describe a verifiable system state, not script output.
-- Every Python step needs a UI-based fallback.
-
-## Examples
-
-**Correct instruction:**
-`python | code=import subprocess; subprocess.Popen(['notepad.exe'])`
-
-**Correct expected_result:**
-`Notepad is open and visible as the active window`
-
-**Correct fallback:**
-`Press Win+S, type Notepad, press Enter`
-
-**Wrong instruction:**
-`Run a python script to open Notepad`
-
-**Wrong expected_result:**
-`The script returns True`
+- Write actual executable code in the instruction — never describe what it should do
+- Chain multiple statements with semicolons on one line
+- `expected_result` must describe a visible system state, not what the script prints
+- Every python step requires a UI-based fallback
+- No blocking code — no `input()`, no infinite loops

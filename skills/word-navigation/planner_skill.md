@@ -1,20 +1,49 @@
-# 🧠 Microsoft Word Strategic Planning Guide (Planner)
+# Microsoft Word — Planner Guide
 
-## 1. Structural Integrity & Flow
-* **The Newline Mandate:** You MUST explicitly plan for line breaks. Never assume the Actor will start a new line. Every new paragraph or header must be preceded by a "New Line" instruction in the plan.
-* **Anchor-Point Planning:** Before any typing task, plan a "Reset Cursor" sub-step (e.g., `ctrl + end`). This prevents the model from accidentally editing the middle of the document and creating "Hallucination Soup."
-* **Phase Segregation:** Separate 'Drafting' from 'Formatting'.
-    * Phase A: Type raw text (headers, paragraphs).
-    * Phase B: Navigate back to headers to apply bolding/sizes.
+All Word tasks require three phases in this order. Do not plan `done` until all three are complete.
 
-## 2. Visual State Verification
-* **Word Count Monitoring:** Use the 'Word Count' element in the status bar to verify progress. If the word count doesn't increase after a 'Type' action, the action failed (likely hijacked by a menu).
-* **The Mini-Toolbar Alert:** If the UIA tree shows formatting buttons (Bold, Italic) during a typing phase, the plan must immediately pivot to a "Deselection" step (Escape/Right Arrow).
+**Phase 1 — Write:** Type all content before touching any formatting.
+**Phase 2 — Format:** Apply heading styles using the Apply Styles dialog (`ctrl + shift + s`).
+**Phase 3 — Save:** Save via the File menu. Confirm the title bar shows the saved filename.
 
-## 3. Advanced Editing Strategies
-* **Search-Based Navigation:** Do not plan to click on specific lines for editing. Instead, plan to use 'Find' (`ctrl + f`) to anchor the cursor to specific text strings for precise modification.
-* **Sectional Drafting:** For long reports, plan to write one section at a time. After each section, plan a "Visual Audit" to ensure the text isn't repeated or garbled.
+---
 
-## 4. Anti-Looping Protocols
-* **Repetition Detection:** If the UIA tree reveals the same sentence twice (e.g., "indelible mark on history"), the current plan is compromised. 
-* **The Nuclear Option:** Plan a "Reset and Rewrite" (Select All + Delete) if the document becomes corrupted by "Inline Drift" (text typing over text).
+## Planning Rules
+
+- Always plan a `ctrl + end` step before any typing to anchor the cursor
+- Always plan a `ctrl + home` step before the formatting phase begins
+- Separate writing and formatting into distinct plan phases — never interleave them
+- Never plan markdown syntax (`#`, `**`) — Word renders these as literal characters
+- Plan one heading style application per step — do not batch them
+
+---
+
+## Action Formats
+
+### Open or create a document
+```
+instruction: "Click 'Blank document' on the Word Start screen"
+expected_result: "Edit | name='Page 1 content' is present in the UIA tree"
+fallback: "Press ctrl + n if Word is already open and the Start screen is not visible"
+```
+
+### Type content
+```
+instruction: "Press ctrl + end to anchor cursor, then type [content]"
+expected_result: "Text appears in the document body"
+fallback: "Click the center of the document area to focus it, then retry ctrl + end"
+```
+
+### Apply a heading style
+```
+instruction: "Use ctrl + f to locate '[heading text]', then apply '[Style Name]' via ctrl + shift + s"
+expected_result: "The heading line reflects the applied style in the UIA tree"
+fallback: "Click the document body to restore focus, then retry ctrl + shift + s"
+```
+
+### Save the document
+```
+instruction: "Click File Tab, then click Save or Save As"
+expected_result: "Title bar shows the saved filename with no unsaved indicator"
+fallback: "If the File menu remains open, press Escape, then retry"
+```
