@@ -3,7 +3,7 @@ from settings.settings import settings
 PYTHON_RUNNER_VENV_NAME = ".kodo_venv"
 
 API_BIND_TO_ALL_IPS = True
-API_PORT = 8000
+API_PORT = 5636
 
 API_DESKTOP_STREAMING_FRAME_RATE = (
     30
