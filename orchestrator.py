@@ -11,6 +11,8 @@ from settings.settings import settings
 from models.model_definitions import SkillInstallationMode
 from skills.skill_orchestrator import Skills
 
+from mcp.types import CallToolResult, TextContent
+
 pc_actions = PCActions()
 
 MAX_ITERATIONS_PER_STEP = (
@@ -304,7 +306,28 @@ class StepOrchestrator:
                     else:
                         signal = handler()
                 elif isinstance(action_result, dict):
+                    # Kodo skill was executed
                     signal = self.action_handler.handle_skill_invocations(action_result)
+                elif isinstance(action_result, CallToolResult):
+                    # MCP Tool Call was executed
+                    text_output = [
+                        block.text
+                        for block in action_result.content
+                        if isinstance(block, TextContent)
+                    ]
+
+                    logger.debug(msg=action_result)
+
+                    isError = action_result.isError
+
+                    self.additional_context = f"""
+# MCP Tool Call Result
+
+Text Output:
+    {text_output}
+
+Has any error occured? {isError}
+"""
 
                 if signal == "BREAK":
                     break
@@ -487,7 +510,23 @@ Output of Iteration: {self.iterations}
                 if isinstance(action_result, dict):
                     self.action_handler.handle_skill_invocations(action_result)
                     successful_run = True
+                elif isinstance(action_result, CallToolResult):
+                    text_output = [
+                        block.text
+                        for block in action_result.content
+                        if isinstance(block, TextContent)
+                    ]
+                    self.additional_context = f"""
+# MCP Tool Call Result
+
+Text Output:
+    {text_output}
+
+Has any error occured? {action_result.isError}
+"""
+                    successful_run = True
                 elif action_result in self.handlers.keys():
+                    # mcp_tool_call is handled as a base action, and so it does not need a separeate invocation, its invocation is in parse_action.py
                     handler = self.handlers[action_result]
                     handler()
                     successful_run = True
@@ -500,6 +539,7 @@ Output of Iteration: {self.iterations}
 
             if successful_run:
                 skill_output = ""
+
                 if isinstance(action_result, dict):
                     stdout = action_result.get("stdout", "")
                     stderr = action_result.get("stderr", "")
@@ -507,12 +547,6 @@ Output of Iteration: {self.iterations}
                         skill_output = (
                             f"\n[Skill Result] stdout: {stdout} | stderr: {stderr}"
                         )
-                self.history = (
-                    self.history
-                    + f"\n {self.step_result.get('history', '')}{skill_output}"
-                )
-                self.runtime_skills = None
-                self.last_action = self.step_result
 
 
 def run_externally(task: str, mode_override: str | None = None):

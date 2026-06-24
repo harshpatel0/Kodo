@@ -1,6 +1,7 @@
 from pc_actions.perform_pc_actions import PCActions
 import skills.skill_orchestrator
 from utils.logger import logger
+from mcps import mcp_registry
 
 import time
 
@@ -12,6 +13,19 @@ import python.run_python_code
 
 pyrun = python.run_python_code.PythonRunner()
 
+import asyncio
+import json
+from mcps.mcp_registry import MCPRegistry
+
+mcp_registry = MCPRegistry()
+loop = asyncio.new_event_loop()
+
+with open("mcps/mcp_servers.json") as f:
+    mcp_config = json.load(f)
+
+for server in mcp_config["servers"]:
+    loop.run_until_complete(mcp_registry.register(server["name"], server))
+
 
 def parse_action(action):
     return_command = "PROCEED"
@@ -21,8 +35,22 @@ def parse_action(action):
         logger.debug(f"[SkillOrchestrator] {result}")
         return result
 
-    # The rest of PC Actions
     match action["action"]:
+        case "mcp_tool_call":
+            import asyncio
+
+            mcp_call = getattr(mcp_registry, "call", None) or getattr(
+                mcp_registry, "call_tool", None
+            )
+            if mcp_call is None:
+                raise AttributeError(
+                    "mcps.mcp_registry has no callable 'call' or 'call_tool'"
+                )
+            result = loop.run_until_complete(
+                mcp_call(action["tool"], action["arguments"])
+            )
+            return result
+
         case "click":
             logger.debug(
                 f"Clicking at X={action['x']}, Y={action['y']} on element={action.get('element')}"
