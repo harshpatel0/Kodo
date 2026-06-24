@@ -160,25 +160,6 @@ class ContextProvider:
         except Exception:
             return "Desktop"
 
-    def get_installed_apps(self):
-        if not self.installed_apps:
-            self.installed_apps = sorted(app.name for app in winapps.list_installed())
-
-        return self.installed_apps
-
-    def get_pinned_apps(self):
-        path = os.path.expandvars(
-            r"%AppData%\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\TaskBar"
-        )
-        pinned_apps = [f.replace(".lnk", "") for f in os.listdir(path)]
-
-        try:
-            pinned_apps.remove("desktop.ini")
-        except Exception:
-            pass
-
-        return pinned_apps
-
     def get_screenshot(self, window_title: str | None = None):
         """
         Captures only the active window region.
