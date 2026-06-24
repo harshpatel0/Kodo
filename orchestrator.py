@@ -22,6 +22,21 @@ MAX_AUTONOMY_STEPS = settings.orchestrator.planner_architecture.max_autonomy_ste
 ACTION_SETTLE_TIME = settings.orchestrator.action_settle_time
 MAX_REPLAN_LOOP = settings.orchestrator.planner_architecture.max_replan_loop
 
+import asyncio
+
+# Register all MCPs
+from mcps.mcp_registry import mcp_registry
+
+loop = asyncio.new_event_loop()
+
+with open("mcps/mcp_servers.json") as f:
+    mcp_config = json.load(f)
+
+for server in mcp_config["servers"]:
+    loop.run_until_complete(mcp_registry.register(server["name"], server))
+
+logger.debug(f"MCP Registered: {mcp_registry.get_tool_schemas()}")
+
 
 class ActionHandlers:
     def __init__(self, orchestrator, in_autonomy=False):
