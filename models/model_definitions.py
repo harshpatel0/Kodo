@@ -13,6 +13,8 @@ from utils.logger import logger
 
 from settings.settings import settings
 
+from mcps.mcp_registry import mcp_registry
+
 skill_orchestrator = Skills()
 
 context_provider = ContextProvider()
@@ -138,6 +140,9 @@ OS: {context_provider.WINDOWS_VERSION}
 Screen: {context_provider.screen_width}x{context_provider.screen_height}
 
 User Task: {task}
+
+# Registered MCP Servers
+{mcp_registry.get_tool_schemas()}
 """
 
         system_prompt = system_prompt + self.base_system_prompt
@@ -235,6 +240,9 @@ ControlType, name, x, y
 TASKBAR (located at the bottom of the screen, y ≈ {context_provider.screen_height - 20}): 
 Taskbar Elements
 {context_provider.get_taskbar_elements()}
+
+# Registered MCP Servers
+{mcp_registry.get_tool_schemas()}
 
 # Additional Context is provided below (if the orchestrator has anything to say)
 """
