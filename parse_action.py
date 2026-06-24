@@ -15,16 +15,9 @@ pyrun = python.run_python_code.PythonRunner()
 
 import asyncio
 import json
-from mcps.mcp_registry import MCPRegistry
+from mcps.mcp_registry import mcp_registry
 
-mcp_registry = MCPRegistry()
 loop = asyncio.new_event_loop()
-
-with open("mcps/mcp_servers.json") as f:
-    mcp_config = json.load(f)
-
-for server in mcp_config["servers"]:
-    loop.run_until_complete(mcp_registry.register(server["name"], server))
 
 
 def parse_action(action):
@@ -37,8 +30,6 @@ def parse_action(action):
 
     match action["action"]:
         case "mcp_tool_call":
-            import asyncio
-
             mcp_call = getattr(mcp_registry, "call", None) or getattr(
                 mcp_registry, "call_tool", None
             )
