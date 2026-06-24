@@ -16,6 +16,7 @@ pyrun = python.run_python_code.PythonRunner()
 import asyncio
 import json
 from mcps.mcp_registry import mcp_registry
+from mcps.mcp_loop import run_async
 
 loop = asyncio.new_event_loop()
 
@@ -37,9 +38,7 @@ def parse_action(action):
                 raise AttributeError(
                     "mcps.mcp_registry has no callable 'call' or 'call_tool'"
                 )
-            result = loop.run_until_complete(
-                mcp_call(action["tool"], action["arguments"])
-            )
+            result = run_async(mcp_call(action["tool"], action["arguments"]))
             return result
 
         case "click":

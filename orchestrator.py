@@ -26,14 +26,18 @@ import asyncio
 
 # Register all MCPs
 from mcps.mcp_registry import mcp_registry
+from mcps.mcp_loop import run_async
 
 loop = asyncio.new_event_loop()
 
 with open("mcps/mcp_servers.json") as f:
     mcp_config = json.load(f)
 
+
 for server in mcp_config["servers"]:
-    loop.run_until_complete(mcp_registry.register(server["name"], server))
+    logger.info(f"Registering MCP server: {server['name']}")
+    run_async(mcp_registry.register(server["name"], server))
+    logger.info(f"Registered MCP server: {server['name']}")
 
 logger.debug(f"MCP Registered: {mcp_registry.get_tool_schemas()}")
 

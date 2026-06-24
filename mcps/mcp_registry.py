@@ -1,4 +1,5 @@
 from mcps.mcp_client import MCPClient
+from utils.logger import logger
 
 
 class MCPRegistry:
@@ -15,6 +16,7 @@ class MCPRegistry:
             self._tools[tool.name] = (name, tool)
 
     async def call(self, tool_name: str, arguments: dict):
+        logger.info(f"Calling {tool_name} with arguments: {arguments}")
         server_name, _ = self._tools[tool_name]
         return await self._clients[server_name].call_tool(tool_name, arguments)
 
