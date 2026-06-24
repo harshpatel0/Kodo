@@ -38,6 +38,12 @@ LOADING_TEXT = [
     "Subscribing to PewDiePie instead of T-Series",
     "Getting griefed by Bowie knife99",
     "Pimping my house for MTV cribs",
+    "Touching grass on your behalf",
+    "Asking Clippy for help",
+    "Consulting the ancient scrolls of Stack Overflow",
+    "Asking Jeeves",
+    "Feeding the hamsters that power this",
+    "The password to the Louvre is louvre",
 ]
 
 

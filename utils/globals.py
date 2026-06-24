@@ -1,10 +1,20 @@
+from settings.settings import settings
+
 PYTHON_RUNNER_VENV_NAME = ".kodo_venv"
 
 API_BIND_TO_ALL_IPS = True
-API_PORT = 8000
+API_PORT = 5636
 
-API_DESKTOP_STREAMING_FRAME_RATE = 24
-API_DESKTOP_STREAMING_PICTURE_QUALITY = 70
+API_DESKTOP_STREAMING_FRAME_RATE = (
+    30
+    if not settings.web_ui.desktop_streaming_frame_rate
+    else settings.web_ui.desktop_streaming_frame_rate
+)
+API_DESKTOP_STREAMING_PICTURE_QUALITY = (
+    85
+    if not settings.web_ui.desktop_streaming_quality_percentage
+    else settings.web_ui.desktop_streaming_quality_percentage
+)
 
 ACTOR_MODEL_ENABLE_DEBUG_OUTPUT_PROMPTS_AND_RESULT_TO_FILE = False
 ACTOR_MODEL_DEBUG_USER_PROMPT_CONSTRUCTION_TO_FILE = "dbg_actor_model.txt"

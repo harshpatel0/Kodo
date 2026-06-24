@@ -1,12 +1,11 @@
 from utils.globals import (
-    API_BIND_TO_ALL_IPS,
     API_DESKTOP_STREAMING_FRAME_RATE,
     API_DESKTOP_STREAMING_PICTURE_QUALITY,
     API_PORT,
 )
 
 
-from server.log_stream import LogStream
+from server.log_stream import LogStream, web_emitter
 import asyncio
 import rootutils
 import json
@@ -37,6 +36,8 @@ import numpy as np
 
 import ctypes
 import threading
+
+from utils.loading_text import get_loading_text
 
 app = FastAPI()
 
@@ -119,13 +120,17 @@ async def run(websocket: WebSocket, task: str, mode_override: str | None = None)
         # Capture the OS thread ID before doing any work
         thread_id_holder.append(threading.current_thread().ident)
         loop.call_soon_threadsafe(thread_id_ready.set)
+
         stream.attach()
+        web_emitter.attach(stream)
+
         try:
             run_externally(task=task, mode_override=mode_override)
         except SystemExit:
             pass  # clean exit from _kill_thread
         finally:
             stream.detach()
+            web_emitter.detach()
 
     future = loop.run_in_executor(
         None, _run_with_stream_and_id, task, mode_override, stream
@@ -159,7 +164,10 @@ async def run(websocket: WebSocket, task: str, mode_override: str | None = None)
         await websocket.close(code=1000)
 
 
-def capture_desktop():
+def capture_desktop(
+    streaming_quality: int = API_DESKTOP_STREAMING_PICTURE_QUALITY,
+    streaming_frame_rate: int = API_DESKTOP_STREAMING_FRAME_RATE,
+):
     monitor = pc_screen.monitors[1]
 
     while True:
@@ -170,7 +178,7 @@ def capture_desktop():
         success, jpeg_img = cv2.imencode(
             ".jpg",
             img,
-            [cv2.IMWRITE_JPEG_QUALITY, API_DESKTOP_STREAMING_PICTURE_QUALITY],
+            [cv2.IMWRITE_JPEG_QUALITY, streaming_quality],
         )
 
         if not success:
@@ -181,7 +189,7 @@ def capture_desktop():
             b"Content-Type: image/jpeg\r\n\r\n" + jpeg_img.tobytes() + b"\r\n"
         )
 
-        time.sleep(1 / API_DESKTOP_STREAMING_FRAME_RATE)
+        time.sleep(1 / streaming_frame_rate)
 
 
 @app.get("/desktop-feed")
@@ -189,6 +197,22 @@ async def desktop_feed():
     return StreamingResponse(
         capture_desktop(), media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+
+@app.get("/bg-desktop-feed")
+async def bg_desktop_feed():
+    return StreamingResponse(
+        capture_desktop(
+            streaming_quality=5,
+            streaming_frame_rate=75,
+        ),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+    )
+
+
+@app.get("/loading-text")
+async def return_loading_text():
+    return get_loading_text()
 
 
 def main():
