@@ -1,11 +1,8 @@
 from pc_actions.perform_pc_actions import PCActions
-import skills.skill_orchestrator
+from skills.skill_orchestrator import skill_orchestrator
 from utils.logger import logger
-from mcps import mcp_registry
 
 import time
-
-skill_orchestrator = skills.skill_orchestrator.Skills()
 
 pc = PCActions(failsafe=True)
 
@@ -13,12 +10,8 @@ import python.run_python_code
 
 pyrun = python.run_python_code.PythonRunner()
 
-import asyncio
-import json
 from mcps.mcp_registry import mcp_registry
 from mcps.mcp_loop import run_async
-
-loop = asyncio.new_event_loop()
 
 
 def parse_action(action):
