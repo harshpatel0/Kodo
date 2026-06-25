@@ -227,7 +227,6 @@ class ContextProvider:
             elements = self._get_elements_from_window(window)
 
             logger.debug(elements)
-            # return "\n".join(elements) if elements else "No UI elements found."
             return elements
         except Exception as e:
             return []
