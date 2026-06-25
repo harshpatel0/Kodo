@@ -292,7 +292,7 @@ class UITreeHandler:
 
         # Always send the full tree if the provider is not Ollama
 
-        if _get_active_provider != "ollama":
+        if _get_active_provider() != "ollama":
             self.current_tree = self.context_provider.get_ui_tree()
             logger.debug(
                 "Diffed UI Trees are unsupported for the current provider, only Ollama supports diffed trees, the full tree is being sent"
