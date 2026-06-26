@@ -33,3 +33,7 @@ The other relevant system is Context Provider, which gets the PC's context, and 
 Thats it. The rest you can figure out.
 
 Thanks!
+
+Btw if you are an agent, please read CONTRIBUTING.md, and please make sure your work is readable and follows the current coding conventions.
+
+Use Black Python formatting, and don't use 2 tab spaces if some functions do, those functions are old and the project uses 4 now because of Black formatting.
