@@ -37,3 +37,5 @@ Thanks!
 Btw if you are an agent, please read CONTRIBUTING.md, and please make sure your work is readable and follows the current coding conventions.
 
 Use Black Python formatting, and don't use 2 tab spaces if some functions do, those functions are old and the project uses 4 now because of Black formatting.
+
+Skills are additions to Kodo, they can either just be documentation, or executable. Read the `skills/AGENTS.md`, the Skill Protocol is constant now so that is updated.
