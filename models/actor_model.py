@@ -1,5 +1,4 @@
 from models.model_definitions import ActorModel
-from context_provider import ContextProvider
 
 import utils.utils as utils
 from utils.logger import logger
@@ -11,7 +10,6 @@ from utils.globals import (
 from server.log_stream import web_emitter
 from settings.settings import settings
 
-context = ContextProvider()
 actor_model = ActorModel()
 
 
