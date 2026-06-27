@@ -2,7 +2,7 @@ import time
 import json
 import copy
 import models.actor_model as actor_model
-from parse_action import parse_action
+from orchestrators.parse_action import parse_action
 from context_provider import ContextProvider
 from orchestrators.action_handlers import ActionHandlers
 from skills.skill_orchestrator import skill_orchestrator
@@ -74,7 +74,7 @@ class AutonomyOrchestrator:
             max_iter = settings.orchestrator.autonomy_orchestrator.max_total_iterations
 
             logger.info(f"""
-Running iteration {self.iterations} out of {max_iter}
+Running iteration {self.iterations+1} out of {max_iter}
 
 Task = {self.task}
 
@@ -84,14 +84,8 @@ Additional Context:
 Skills:
 {self.skills}
 
-Runtime Skills:
-{self.runtime_skills}
-
 History (truncated):
 {truncated_history}
-
-Available Skill Actions:
-{self.skill_orchestrator.list_actions()}
 """)
 
             if max_iter > 0 and self.iterations >= max_iter:
@@ -106,7 +100,7 @@ Available Skill Actions:
 
             punishment_tally = None
             if max_iter > 0:
-                punishment_tally = f"Iteration {self.iterations} out of maximum {max_iter}\n{last_action_info}"
+                punishment_tally = f"Iteration {self.iterations+1} out of maximum {max_iter}\n{last_action_info}"
 
             try:
                 self.step_result = actor_model.do_step(

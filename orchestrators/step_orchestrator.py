@@ -1,6 +1,6 @@
 import time
 import models.actor_model as actor_model
-from parse_action import parse_action
+from orchestrators.parse_action import parse_action
 from context_provider import ContextProvider
 from orchestrators.action_handlers import ActionHandlers
 from utils.logger import logger
