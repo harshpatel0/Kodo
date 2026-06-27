@@ -3,6 +3,8 @@ import json
 from mcp.types import CallToolResult, TextContent
 from settings.settings import settings
 
+from orchestrators.parse_action import parse_action
+
 MAX_ITERATIONS_PER_STEP = (
     settings.orchestrator.planner_architecture.max_iterations_per_step
 )
@@ -114,6 +116,9 @@ class ActionHandlers:
                 + "\n"
             )
         return "CONTINUE"
+
+    def handle_action(self, action):
+        action_result = parse_action(action=action)
 
     def handle_skill_invocations(self, action_result):
         logger.debug(action_result)
