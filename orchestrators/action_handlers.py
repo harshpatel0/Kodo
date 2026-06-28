@@ -32,21 +32,6 @@ class ActionHandlers:
 
     def handleDone(self):
         logger.info("The actor model claims the task is done, hard exiting...")
-        element = self.orchestrator.step_result.get("element", "")
-
-        if element:
-            ui_tree = self.orchestrator.context_provider.get_ui_tree()
-            ui_text = "\n".join(ui_tree) if isinstance(ui_tree, list) else str(ui_tree)
-            if element not in ui_text:
-                logger.warning(
-                    f"Actor claimed DONE, but '{element}' not found in UI tree. Forcing retry."
-                )
-                self.orchestrator.additional_context += (
-                    f"You claimed to be done, but '{element}' is not present in the current UI tree. "
-                    "Please ensure the action completed correctly.\n"
-                )
-                return "CONTINUE"
-
         self.orchestrator.hard_exit = True
         return "BREAK"
 
@@ -218,3 +203,6 @@ Text Output:
 Has any error occurred? {action_result.isError}
 """
         return "CONTINUE"
+
+    def call_action(self, action: dict):
+        result = parse_action(action=action)
