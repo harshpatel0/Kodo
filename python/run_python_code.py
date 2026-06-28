@@ -219,7 +219,11 @@ class PythonRunner:
             install_error = self._install_packages(imports)
             if install_error:
                 os.unlink(temp_path)
-                return install_error
+                return KodoSkillResult(
+                    result="PACKAGE_INSTALL_ERROR",
+                    skill_output="",
+                    skill_errors=str(install_error),
+                )
 
         # Run the temp file, actual Python errors come through clearly here
         command = [self.venv_python, temp_path]
