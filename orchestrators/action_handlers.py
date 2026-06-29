@@ -170,8 +170,15 @@ The code/skill took too long to run and was killed prematurely. Here are the log
     elif action_result_type == "ERROR":
         return ActionResult(
             signal="CONTINUE",
-            additional_context=additional_context
-            + f"The code/skill ran with errors\n{action_result_stderr}",
+            additional_context=additional_context + f"""
+THe skill provided the following output with a severe error
+
+## Output
+{action_result_stdout}
+
+## Errors
+{action_result_stderr}
+""",
         )
 
     elif action_result_type == "SUCCESS":
@@ -179,7 +186,15 @@ The code/skill took too long to run and was killed prematurely. Here are the log
             signal="BREAK",
             step_count=step_count + 1 if not in_autonomy else None,
             replan_history=[],
-            additional_context="",
+            additional_context=additional_context + f"""
+The skill provided the following output with no severe errors
+
+## Output
+{action_result_stdout}
+
+## Errors
+{action_result_stderr}
+""",
         )
 
     else:
