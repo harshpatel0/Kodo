@@ -149,14 +149,15 @@ class Skills:
                             "generated_for_planner"
                         )
 
-                    if definition.get("entry", None):
-                        entry = os.path.join(skill_path, definition["entry"])
+                    entry = definition.get("entry", None)
+                    if entry:
+                        entry = os.path.join(skill_path, entry)
 
-                    if not os.path.exists(entry):
+                    if entry and not os.path.exists(entry):
                         logger.warning(
                             f"Warning: entry '{entry}' not found for skill '{skill_folder}', skipping executable."
                         )
-                    else:
+                    elif entry:
                         skill_entry["executable"] = True
                         skill_entry["actions"] = definition.get("actions", [])
                         skill_entry["description"] = definition.get("description")
