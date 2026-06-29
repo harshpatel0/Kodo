@@ -14,6 +14,7 @@ VENV_PYTHON = os.path.join(
 )
 
 from python.run_python_code import PythonRunner
+from result_types.KodoSkillResult import KodoSkillResult
 from utils.logger import logger
 
 
@@ -206,13 +207,13 @@ class Skills:
         entry = self._dispatch.get(action_name)
 
         if not entry:
-            return (
-                f"[Skill Orchestrator] No skill registered for action '{action_name}'"
+            return KodoSkillResult(
+                "ERROR",
+                skill_output="",
+                skill_errors=f"No skill registered for action '{action_name}'",
             )
 
-        args = action
-
-        return self._runner.run_skill_by_path(entry, args)
+        return self._runner.run_skill_by_path(entry, action)
 
     def list_actions(self):
         return list(self._dispatch.keys())

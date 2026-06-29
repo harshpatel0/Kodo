@@ -12,13 +12,16 @@ MAX_AUTONOMY_STEPS = settings.orchestrator.planner_architecture.max_autonomy_ste
 ACTION_SETTLE_TIME = settings.orchestrator.action_settle_time
 MAX_REPLAN_LOOP = settings.orchestrator.planner_architecture.max_replan_loop
 
+from result_types import KodoSkillResult, PrimitiveActionResult
+from typing import Literal
+
 
 class ActionHandlers:
     def __init__(self, orchestrator, in_autonomy=False):
         self.orchestrator = orchestrator
         self.in_autonomy = in_autonomy
 
-    def handleProceed(self):
+    def handle_proceed(self, result) -> Literal["BREAK"]:
         if not self.in_autonomy:
             self.orchestrator.step_count += 1
             self.orchestrator.iterations = 0
@@ -30,12 +33,12 @@ class ActionHandlers:
 
         return "BREAK"
 
-    def handleDone(self):
+    def handle_done(self, result) -> Literal["BREAK"]:
         logger.info("The actor model claims the task is done, hard exiting...")
         self.orchestrator.hard_exit = True
         return "BREAK"
 
-    def handleStuck(self):
+    def handle_stuck(self, result) -> Literal["CONTINUE"]:
         if not self.in_autonomy:
             logger.info(
                 f"The Actor Model claims it is stuck, running another iteration with added context {self.orchestrator.iterations+1}/{MAX_ITERATIONS_PER_STEP}"
@@ -45,7 +48,7 @@ class ActionHandlers:
                 f"The Actor Model claims it is stuck, running another iteration with added context"
             )
 
-        last_action = self.orchestrator.step_result.get("action", "unknown")
+        last_action = result.action
         last_args = {
             k: v for k, v in self.orchestrator.step_result.items() if k != "action"
         }
@@ -55,8 +58,8 @@ class ActionHandlers:
         )
         return "CONTINUE"
 
-    def handleReplan(self, step_result):
-        next_action = step_result.get("next", "")
+    def handle_replan(self, result) -> Literal["CONTINUE"]:
+        next_action = result.command.get("next", "")
         self.orchestrator.replan_history.append(next_action)
 
         # Normalize replan entries by lowercasing and stripping whitespace
@@ -84,7 +87,7 @@ class ActionHandlers:
         )
         return "CONTINUE"
 
-    def handleRetry(self):
+    def handle_retry(self, result) -> Literal["CONTINUE"]:
         logger.warning(
             f"[STEP_ORCHESTRATOR] Retrying with added context {self.orchestrator.iterations+1}/{MAX_ITERATIONS_PER_STEP}"
         )
@@ -92,25 +95,26 @@ class ActionHandlers:
             self.orchestrator.additional_context = (
                 self.orchestrator.additional_context
                 + f"{self.orchestrator.step_result['message']}"
-                + "\n"
+                + "\t"
+                + f"{result.error_message}"
             )
         except Exception:
             self.orchestrator.additional_context = (
                 self.orchestrator.additional_context
                 + "The Action Parser was not able to parse your action. Be more careful with the format in this run."
                 + "\n"
+                + f"{result.error_message}"
             )
         return "CONTINUE"
 
-    def handle_action(self, action):
-        action_result = parse_action(action=action)
-
-    def handle_skill_invocations(self, action_result):
+    def handle_skill_invocations(
+        self, action_result: KodoSkillResult
+    ) -> Literal["CONTINUE", "BREAK"]:
         logger.debug(action_result)
-        action_result_type = action_result.get("result")
-        action_result_stderr = action_result.get("stderr", "No errors!")
-        action_result_stdout = action_result.get(
-            "stdout", "Script / Skill outputted nothing"
+        action_result_type = action_result.result
+        action_result_stderr = action_result.skill_errors or "No errors!"
+        action_result_stdout = (
+            action_result.skill_output or "Script / Skill outputted nothing"
         )
 
         logger.debug(
@@ -185,7 +189,7 @@ The code/skill ran successfully, here are the logs of the Output and Error Strea
                 f"Unhandled action result: '{action_result}'. The LLM may have hallucinated an action type."
             )
 
-    def handle_mcp_tool_call_result(self, action_result):
+    def handle_mcp_tool_call_result(self, action_result) -> Literal["CONTINUE"]:
         logger.debug(msg=action_result)
 
         text_output = [
@@ -204,5 +208,30 @@ Has any error occurred? {action_result.isError}
 """
         return "CONTINUE"
 
-    def call_action(self, action: dict):
+    def call_action(self, action: dict) -> Literal["CONTINUE", "BREAK"]:
+        """Call and handle the action. This function will modify additional_context directly."""
         result = parse_action(action=action)
+
+        primitive_handlers = {
+            "PROCEED": self.handle_proceed,
+            "DONE": self.handle_done,
+            "STUCK": self.handle_stuck,
+            "REPLAN": self.handle_replan,
+            "RETRY": self.handle_retry,
+        }
+
+        if isinstance(result, PrimitiveActionResult):
+            handler = primitive_handlers[result.command]
+            return handler(result)
+
+        elif isinstance(result, KodoSkillResult):
+            return self.handle_skill_invocations(result)
+
+        elif isinstance(result, CallToolResult):
+            return self.handle_mcp_tool_call_result(result)
+
+        else:
+            logger.warning(
+                "Unexpected result path, reached else in call_action, ending run"
+            )
+            raise NotImplementedError()

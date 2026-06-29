@@ -20,7 +20,7 @@ from result_types.KodoSkillResult import KodoSkillResult
 
 def parse_action(
     action,
-) -> str | PrimitiveActionResult | CallToolResult | KodoSkillResult:
+) -> PrimitiveActionResult | CallToolResult | KodoSkillResult:
     return_command = "PROCEED"
     error_message = ""
 
