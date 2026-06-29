@@ -23,7 +23,7 @@ class History:
 
         for entry in reversed(self.history):
             candidate = "\n".join([entry] + trimmed)
-            if len(candidate) > max_tokens:
+            if estimate_tokens(candidate) > max_tokens:
                 break
             trimmed.insert(0, entry)
         return trimmed
