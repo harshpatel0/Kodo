@@ -46,5 +46,6 @@ def make_plan(task: str):
     plan.setdefault("_actor_skills", actor_skills)
 
     web_emitter.plan(plan)
+    web_emitter.thinking(chat_response.thinking)
 
     return plan
