@@ -61,9 +61,11 @@ def get_all_windows_apps():
     return app_map
 
 
-def open_app(app_name):
+def open_app(app_name, background=False):
     if not app_name:
         print("Error: No app name.", file=sys.stderr)
+        return
+
     app_map = get_all_windows_apps()
     target = next(
         (path for name, path in app_map.items() if name.lower() == app_name.lower()),
@@ -71,15 +73,31 @@ def open_app(app_name):
     )
 
     if not target:
-        print(f"App {app_name} not found and could not be launcehd", file=sys.stderr)
+        print(f"App {app_name} not found and could not be launched", file=sys.stderr)
         return
+
+    is_uwp = target.startswith("shell:AppsFolder")
+
+    if background:
+        if not is_uwp:
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 6  # SW_MINIMIZE
+
+            proc = subprocess.Popen(target, startupinfo=startupinfo)
+            pid = proc.pid
+            print(f"Launched {app_name} in background (PID: {pid})")
+            return pid
+        else:
+            os.startfile(target)
+            time.sleep(3)
+            print(f"Launched {app_name} in background")
+            return None
 
     deadline = time.time() + 10
 
     os.startfile(target)
     exe_name = os.path.basename(target).lower()
-
-    is_uwp = target.startswith("shell:AppsFolder")
 
     if is_uwp:
         time.sleep(3)
@@ -116,6 +134,7 @@ Use this to move the task forward instantly.
 1. **Validation**: Only plan to open apps listed above. If an app isn't listed, search the web instead.
 2. **State Transition**: A launch step is only 'Done' when the app is confirmed as the active window.
 3. **Avoid the Trap**: Never plan a step to 'Click the Start Menu' if the app is in the list above.
+4. **DirectAppControl**: When using DirectAppControl to control an app, pass `"background": true` to launch without stealing focus and return its PID for connection.
     """,
         "actor": f"""
 ## App Launcher — Tactical Guide
@@ -129,6 +148,8 @@ If the Planner requests an app name that is slightly different from the grid bel
 ```json
 {{"action": "open_app", "app": "name"}}
 ```
+Include `"background": true` when the app should launch without focus and you need its PID (e.g., for DirectAppControl).
+
 ### Recovery Protocol
 - If `open_app` fails: Do NOT retry. Check if the app is already running in the Taskbar.
 - If multiple versions exist: Default to the one that matches the Planner's intent.
@@ -144,4 +165,4 @@ if __name__ == "__main__":
         generate_context()
 
     args = json.loads(sys.argv[1])
-    print(open_app(args.get("app")))
+    print(open_app(args.get("app"), background=args.get("background", False)))
