@@ -295,7 +295,7 @@ def call_action(
             signal="CONTINUE",
             step_count=step_count + 1 if not in_autonomy else None,
             iterations=iterations + 1 if in_autonomy else None,
-            additional_context=f"Processes Found: {control_list_string}",
+            additional_context=f"Controls Found: {control_list_string}",
         )
 
     elif isinstance(parsed_action, DirectAppInteractionResult):

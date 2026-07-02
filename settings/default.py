@@ -65,6 +65,7 @@ default_settings = {
         "screenshot_quality_percentage": 80,
         "provide_uia_tree": True,
     },
+    "log_to_file": True,
     "skills": {
         "skill_timeout": 0,
     },

@@ -12,6 +12,7 @@ from utils.globals import ALLOWED_CONTROL_TYPES, STRUCTURAL_TYPES
 class DirectAppController:
     def __init__(self) -> None:
         self.application: Application | None = None
+        self.connected_pid: int | None = None
 
     def _resolve_by_runtime_id(self, window, control_id: str):
         target = tuple(int(x) for x in control_id.split("-"))
@@ -19,6 +20,25 @@ class DirectAppController:
             if element.element_info.runtime_id == target:
                 return element
         return None
+
+    def _get_pattern(self, element, pattern_name: str):
+        """Safely access a UIA pattern, handling wrappers that lack the property."""
+        if element is None:
+            return None
+        try:
+            pattern = getattr(element, pattern_name, None)
+            if pattern is not None:
+                return pattern
+        except Exception:
+            pass
+
+        try:
+            from pywinauto.controls.uiawrapper import UIAWrapper
+
+            uia_wrapper = UIAWrapper(element.element_info)
+            return getattr(uia_wrapper, pattern_name, None)
+        except Exception:
+            return None
 
     def _stringify_runtime_id(self, runtime_id: tuple) -> str:
         return "-".join(map(str, runtime_id))
@@ -28,6 +48,7 @@ class DirectAppController:
             self.application = pywinauto.application.Application(backend="uia").connect(
                 process=process_id
             )
+            self.connected_pid = process_id
 
             return DirectAppConnectionResult(success=True, message="Connected")
         except pywinauto.application.ProcessNotFoundError:
@@ -47,17 +68,40 @@ class DirectAppController:
 
         for w in windows:
             try:
-                if not w.is_visible():
-                    continue
                 pid = w.process_id()
                 if pid in seen_pids:
                     continue
+
+                title = w.window_text()
+                class_name = w.element_info.class_name
+                rect = w.rectangle()
+
+                # 1. Skip completely invisible service/background hosts
+                # EXCEPT for the known UWP app shell wrapper class.
+                if not w.is_visible() and class_name != "ApplicationFrameWindow":
+                    continue
+
+                # 2. Filter out windows without dimensions (0x0 background triggers)
+                if (
+                    rect.width() <= 0 or rect.height() <= 0
+                ) and class_name != "ApplicationFrameWindow":
+                    continue
+
+                # 3. Filter out system/background artifacts that have empty titles
+                # (Standard UWP apps like Settings will be caught via ApplicationFrameWindow)
+                if not title and class_name != "ApplicationFrameWindow":
+                    continue
+
+                # 4. Skip common background background host components that aren't real apps
+                if class_name in ["Windows.UI.Core.CoreWindow", "InputIndicatorWindow"]:
+                    continue
+
                 seen_pids.add(pid)
                 result.append(
                     Process(
                         pid=pid,
-                        title=w.window_text(),
-                        class_name=w.element_info.class_name,
+                        title=title if title else "Windows Settings / UWP App",
+                        class_name=class_name,
                     )
                 )
             except Exception:
@@ -96,13 +140,14 @@ class DirectAppController:
                     continue
 
                 if expand_dropdowns:
-                    try:
-                        expand = element.iface_expand_collapse_pattern
-                        if expand and expand.CurrentExpandCollapseState == 0:
-                            expand.Expand()
-                            time.sleep(0.05)
-                    except:
-                        pass
+                    expand = self._get_pattern(element, "iface_expand_collapse")
+                    if expand:
+                        try:
+                            if expand.CurrentExpandCollapseState == 0:
+                                expand.Expand()
+                                time.sleep(0.05)
+                        except Exception:
+                            pass
 
                 try:
                     name = element.window_text().strip()
@@ -110,14 +155,14 @@ class DirectAppController:
                     name = ""
 
                 value = None
-                try:
-                    vp = element.iface_value_pattern
-                    if vp:
+                vp = self._get_pattern(element, "iface_value")
+                if vp:
+                    try:
                         value = (vp.CurrentValue or "").strip()
-                except:
-                    pass
+                    except Exception:
+                        pass
 
-                if not (name or value):
+                if not (name or value) and ctrl_type not in {"Edit", "Document"}:
                     continue
 
                 runtime_id = self._stringify_runtime_id(element.element_info.runtime_id)
@@ -140,73 +185,143 @@ class DirectAppController:
 
         return DirectAppControlListResult(controls=controls)
 
-    def interact(self, control_id: str) -> DirectAppInteractionResult:
+    def interact(
+        self, control_id: str, value: str | None = None
+    ) -> DirectAppInteractionResult:
         if not self.application:
             return DirectAppInteractionResult(
                 success=False,
                 message="Not connected to a window, connect to the window to interact with it",
             )
 
-        element = self._resolve_by_runtime_id(self.application.top_window(), control_id)
+        window = self.application.top_window()
+        element = self._resolve_by_runtime_id(window, control_id)
+
         if element is None:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
-        try:
-            inv = element.iface_invoke_pattern
-            if inv:
-                inv.Invoke()
+
+        # Check for standard Invoke (Buttons)
+        invoke = self._get_pattern(element, "iface_invoke")
+        if invoke:
+            try:
+                invoke.Invoke()
                 return DirectAppInteractionResult(
-                    success=True, message="Invoked", method="invoke"
+                    success=True, method="invoke", message="Invoked control"
                 )
-        except Exception:
-            pass
-        try:
-            tog = element.iface_toggle_pattern
-            if tog:
-                tog.Toggle()
+            except Exception as e:
                 return DirectAppInteractionResult(
-                    success=True, message="Toggled", method="toggle"
+                    success=False, message=f"Invoke failed: {e}"
                 )
-        except Exception:
-            pass
-        try:
-            sel = element.iface_selection_item_pattern
-            if sel:
-                sel.Select()
+
+        # Check for Toggle (Checkboxes/Switches)
+        toggle = self._get_pattern(element, "iface_toggle")
+        if toggle:
+            try:
+                toggle.Toggle()
                 return DirectAppInteractionResult(
-                    success=True, message="Selected", method="select"
+                    success=True, method="toggle", message="Toggled control"
                 )
-        except Exception:
-            pass
-        return DirectAppInteractionResult(
-            success=False, message="No supported pattern (invoke/toggle/select)"
-        )
+            except Exception as e:
+                return DirectAppInteractionResult(
+                    success=False, message=f"Toggle failed: {e}"
+                )
+
+        # Check for SelectionItem (ListItems/Radio buttons)
+        select = self._get_pattern(element, "iface_selection_item")
+        if select:
+            try:
+                select.Select()
+                return DirectAppInteractionResult(
+                    success=True, method="select", message="Selected control"
+                )
+            except Exception as e:
+                return DirectAppInteractionResult(
+                    success=False, message=f"Selection failed: {e}"
+                )
+
+        # Handle ComboBoxes by expanding them, or setting value directly
+        if element.element_info.control_type == "ComboBox":
+            expand_pattern = self._get_pattern(element, "iface_expand_collapse")
+            if expand_pattern:
+                try:
+                    expand_pattern.Expand()
+                    return DirectAppInteractionResult(
+                        success=True,
+                        method="expand_collapse",
+                        message="Expanded ComboBox. Please run list_controls to see the new dropdown items.",
+                    )
+                except Exception as e:
+                    return DirectAppInteractionResult(
+                        success=False, message=f"Expand failed: {e}"
+                    )
+
+            if value is not None:
+                vp = self._get_pattern(element, "iface_value")
+                if vp:
+                    try:
+                        vp.SetValue(value)
+                        return DirectAppInteractionResult(
+                            success=True,
+                            method="value_pattern",
+                            message=f"Set ComboBox value to '{value}'",
+                        )
+                    except Exception as e:
+                        return DirectAppInteractionResult(
+                            success=False, message=f"Value pattern set failed: {e}"
+                        )
+
+            return DirectAppInteractionResult(
+                success=False,
+                message="ComboBox found but has no Expand or Value pattern",
+            )
+
+        # Last resort: try ValuePattern for controls that don't support invoke/toggle/select
+        if value is not None:
+            vp = self._get_pattern(element, "iface_value")
+            if vp:
+                try:
+                    vp.SetValue(value)
+                    return DirectAppInteractionResult(
+                        success=True,
+                        method="value_pattern",
+                        message=f"Set value to '{value}'",
+                    )
+                except Exception as e:
+                    return DirectAppInteractionResult(
+                        success=False, message=f"Value pattern set failed: {e}"
+                    )
 
     def expand(self, control_id: str) -> DirectAppInteractionResult:
         if not self.application:
             return DirectAppInteractionResult(
-                success=False,
-                message="Not connected to a window, connect to the window to interact with it",
+                success=False, message="Not connected to a window."
             )
-        element = self._resolve_by_runtime_id(self.application.top_window(), control_id)
+
+        window = self.application.top_window()
+        element = self._resolve_by_runtime_id(window, control_id)
+
         if element is None:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
-        try:
-            exp = element.iface_expand_collapse_pattern
-            if not exp:
-                return DirectAppInteractionResult(
-                    success=False, message="No expand/collapse pattern"
-                )
-            exp.Expand()
+
+        expand_pattern = self._get_pattern(element, "iface_expand_collapse")
+        if not expand_pattern:
             return DirectAppInteractionResult(
-                success=True, message="Expanded", method="expand"
+                success=False,
+                message=f"Control {element.element_info.control_type} does not support expanding.",
+            )
+        try:
+            expand_pattern.Expand()
+            return DirectAppInteractionResult(
+                success=True,
+                message="Successfully expanded control. Run list_controls to see new children.",
             )
         except Exception as e:
             return DirectAppInteractionResult(
-                success=False, message=f"Expand failed: {e}"
+                success=False, message=f"Expand failed: {str(e)}"
             )
 
     def collapse(self, control_id: str) -> DirectAppInteractionResult:
@@ -220,13 +335,13 @@ class DirectAppController:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
+        expand_pattern = self._get_pattern(element, "iface_expand_collapse")
+        if not expand_pattern:
+            return DirectAppInteractionResult(
+                success=False, message="No expand/collapse pattern"
+            )
         try:
-            exp = element.iface_expand_collapse_pattern
-            if not exp:
-                return DirectAppInteractionResult(
-                    success=False, message="No expand/collapse pattern"
-                )
-            exp.Collapse()
+            expand_pattern.Collapse()
             return DirectAppInteractionResult(
                 success=True, message="Collapse", method="collapse"
             )
@@ -246,24 +361,28 @@ class DirectAppController:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
-        try:
-            vp = element.iface_value_pattern
-            if vp:
+        vp = self._get_pattern(element, "iface_value")
+        if vp:
+            try:
                 vp.SetValue(value)
                 return DirectAppInteractionResult(
                     success=True, message="Set value", method="value_pattern"
                 )
-        except Exception:
-            pass
-        try:
-            legacy = element.iface_legacy_iaccessible_pattern
-            if legacy:
+            except Exception as e:
+                return DirectAppInteractionResult(
+                    success=False, message=f"Value pattern set failed: {e}"
+                )
+        legacy = self._get_pattern(element, "iface_legacy_iaccessible")
+        if legacy:
+            try:
                 legacy.SetValue(value)
                 return DirectAppInteractionResult(
                     success=True, message="Set value", method="legacy"
                 )
-        except Exception:
-            pass
+            except Exception as e:
+                return DirectAppInteractionResult(
+                    success=False, message=f"Legacy set failed: {e}"
+                )
         return DirectAppInteractionResult(
             success=False, message="No non-focus-stealing pattern available"
         )
@@ -286,8 +405,13 @@ class DirectAppController:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
+        scroll_fn = self._get_pattern(element, "scroll")
+        if not scroll_fn:
+            return DirectAppInteractionResult(
+                success=False, message="Control does not support scroll"
+            )
         try:
-            element.scroll(direction, amount)
+            scroll_fn(direction, amount)
             return DirectAppInteractionResult(
                 success=True, message="Scrolled", method="scroll"
             )
@@ -310,12 +434,12 @@ class DirectAppController:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
+        rv = self._get_pattern(element, "iface_range_value")
+        if not rv:
+            return DirectAppInteractionResult(
+                success=False, message="No range value pattern"
+            )
         try:
-            rv = element.iface_range_value
-            if not rv:
-                return DirectAppInteractionResult(
-                    success=False, message="No range value pattern"
-                )
             rv.SetValue(value)
             return DirectAppInteractionResult(
                 success=True, message="Value set", method="range_value"
@@ -342,38 +466,26 @@ class DirectAppController:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
+
+        method_name = {
+            "close": "close",
+            "maximize": "maximize",
+            "minimize": "minimize",
+            "restore": "restore",
+        }.get(interaction)
+        fn = self._get_pattern(element, method_name)
+        if not fn:
+            return DirectAppInteractionResult(
+                success=False,
+                message=f"Control does not support {interaction}",
+            )
         try:
-            if interaction == "close":
-                element.close()
-                return DirectAppInteractionResult(
-                    success=True,
-                    message=f"{interaction.title()}d Window",
-                    method=interaction,
-                )
-
-            if interaction == "maximize":
-                element.maximize()
-                return DirectAppInteractionResult(
-                    success=True,
-                    message=f"{interaction.title()}d Window",
-                    method=interaction,
-                )
-
-            if interaction == "minimize":
-                element.minimize()
-                return DirectAppInteractionResult(
-                    success=True,
-                    message=f"{interaction.title()}d Window",
-                    method=interaction,
-                )
-
-            if interaction == "restore":
-                element.restore()
-                return DirectAppInteractionResult(
-                    success=True,
-                    message=f"{interaction.title()}d Window",
-                    method=interaction,
-                )
+            fn()
+            return DirectAppInteractionResult(
+                success=True,
+                message=f"{interaction.title()}d Window",
+                method=interaction,
+            )
         except Exception as e:
             return DirectAppInteractionResult(
                 success=False, message=f"{interaction.title()} failed: {e}"
@@ -406,12 +518,12 @@ class DirectAppController:
             return DirectAppInteractionResult(
                 success=False, message="Control not found"
             )
+        gp = self._get_pattern(element, "iface_grid")
+        if not gp:
+            return DirectAppInteractionResult(
+                success=False, message="No grid pattern available"
+            )
         try:
-            gp = element.iface_grid_pattern
-            if not gp:
-                return DirectAppInteractionResult(
-                    success=False, message="No grid pattern available"
-                )
             item = gp.GetItem(row, col)
             return DirectAppInteractionResult(
                 success=True,

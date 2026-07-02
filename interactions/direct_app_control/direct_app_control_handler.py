@@ -35,7 +35,9 @@ class DirectAppControlHandler:
                 return self.direct_app_controller.list_controls()
 
             case "interact":
-                return self.direct_app_controller.interact(control_id=control_id)
+                return self.direct_app_controller.interact(
+                    control_id=control_id, value=action.get("value")
+                )
 
             case "expand":
                 return self.direct_app_controller.expand(control_id=control_id)

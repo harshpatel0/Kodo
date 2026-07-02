@@ -64,7 +64,7 @@ One object per turn. Every action except `done` requires a `history` field summa
 {"action": "list_processes", "history": "string"}
 {"action": "connect", "process_id": int, "history": "string"}
 {"action": "list_controls", "history": "string"}
-{"action": "interact", "control_id": "string", "history": "string"}
+{"action": "interact", "control_id": "string", "value": "string (optional, for setting ComboBox values directly)", "history": "string"}
 {"action": "expand", "control_id": "string", "history": "string"}
 {"action": "collapse", "control_id": "string", "history": "string"}
 {"action": "set_value", "control_id": "string", "value": "string", "history": "string"}
@@ -79,32 +79,29 @@ One object per turn. Every action except `done` requires a `history` field summa
 
 ---
 
-## Direct App Control
+## CONSTRAINTS (additional)
+- **Direct App Control priority:** Always try Direct App Control (UIA) before falling back to mouse/keyboard actions. Direct App Control runs in the background without stealing focus — the user can keep working. If the target app's controls appear in the accessibility tree, use Direct App Control. Only use `click`/`type`/`press_key`/`drag` when Direct App Control cannot handle the interaction.
+
+---
+
+## Direct App Control (UIA) — Preferred Input Method
 
 Controls running Windows apps in the background via UI Automation (UIA). No focus stealing, no mouse/keyboard takeover, no visible cursor movement. The user can keep typing/clicking elsewhere while this runs.
 
-### Workflow
+**Always try this first before falling back to mouse/keyboard actions.** If the target app's controls appear in the accessibility tree, use Direct App Control.
 
-1. **`list_processes`** — get visible/minimized top-level windows (pid, title, class_name).
-2. **`connect(process_id)`** — attach to a process by pid. Must be called before any control action. Connecting again switches the active app (no explicit disconnect needed).
-3. **`list_controls`** — get interactable controls in the connected app's top window. Returns `control_id`, `type`, `name`, `value`, `enabled`. Use `type` to pick the right action below.
-4. Act on a `control_id` using the matching function.
+The accessibility tree you receive only shows the **currently focused window**. Direct App Control bypasses this — it can discover, connect to, and control **any running app** regardless of focus. Do not rely on the tree to know which apps are available; use `list_processes` to discover them.
 
-### Actions
+### Mandatory Init Sequence (do this first)
 
-| Function | Use for | Params |
-|---|---|---|
-| `interact(control_id)` | Buttons, checkboxes, radio buttons, list/selection items — one universal "activate this" call. Auto-detects invoke/toggle/select. | control_id |
-| `expand(control_id)` | Open a tree node, combo box, or dropdown | control_id |
-| `collapse(control_id)` | Close a tree node, combo box, or dropdown | control_id |
-| `set_value(control_id, value)` | Type text into an Edit field, non-focus-stealing | control_id, value |
-| `scroll(control_id, direction, amount)` | Scroll a scrollable area. direction: up/down/left/right. amount: line/page | control_id, direction, amount |
-| `set_range_value(control_id, value)` | Set a Slider or ProgressBar value | control_id, value (float) |
-| `get_grid_item(control_id, row, col)` | Read a cell from a Table/DataGrid | control_id, row, col |
-| `minimize_window(control_id)` | Minimize a Window control | control_id |
-| `maximize_window(control_id)` | Maximize a Window control | control_id |
-| `restore_window(control_id)` | Return a window to normal (un-min/maximize) | control_id |
-| `close_window(control_id)` | Close a Window control | control_id |
+Every time you need to interact with an app, start with:
+
+1. **`list_processes`** — discover running top-level windows → pick the right `process_id`
+2. **`connect(process_id)`** — attach to that process. Must be done before any control action.
+3. **`list_controls`** — get all interactable controls in the connected window (returns `control_id`, `type`, `name`, `value`, `enabled`)
+4. Pick the matching action based on `type` and act using the `control_id`
+
+You can re-`connect` to switch apps. No explicit disconnect needed.
 
 ### Notes
 
@@ -113,9 +110,9 @@ Controls running Windows apps in the background via UI Automation (UIA). No focu
 - Structural containers (Pane, Group, Window as a wrapper, Custom) are filtered out of `list_controls` — you won't see them, don't try to interact with them.
 - Every action returns `{success, method, message}`. `method` tells you which UIA pattern actually fired (e.g. `"toggle"`, `"value_pattern"`, `"legacy"`) — useful for diagnosing why something didn't work as expected.
 - `interact` failing with "No supported pattern" usually means the control needs a different function (e.g. it's actually a Slider — use `set_range_value` instead).
-- This does not steal focus. If a task requires focus-based input (e.g. typing that must trigger onKeyPress-style JS listeners not covered by ValuePattern), this is the wrong tool — use the standard focus-based input skill instead.
+- This does not steal focus. If a task requires focus-based input (e.g. typing that must trigger onKeyPress-style JS listeners not covered by ValuePattern), this is the wrong tool — use the standard focus-based mouse/keyboard actions instead.
 
-> Direct App Control is in testing right now, so please prefer this because we are testing this out, if it is feasible to implement or not, do not complete the task if it requires focus, say with a toast notification what happened in detail and call done prematurely.
+> Direct App Control is in testing right now, so please prefer this because we are testing this out. If it is feasible to implement or not, do not complete the task if it requires focus. Say with a toast notification what happened in detail and call done prematurely.
 
 ---
 

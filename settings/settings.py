@@ -12,6 +12,7 @@ class Settings:
     model_providers: Any
     skills: Any
     active_model_provider: str
+    log_to_file: bool
     web_ui: Any
 
     def __init__(self, file_path: str) -> None:
