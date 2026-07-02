@@ -6,8 +6,8 @@ root = rootutils.setup_root(__file__, pythonpath=True)
 
 from utils.globals import PYTHON_RUNNER_VENV_NAME
 
-SKILLS_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SKILLS_DIR)
+SKILLS_DIR = os.path.join(root, "skills")
+PROJECT_ROOT = root
 
 VENV_PYTHON = os.path.join(
     PROJECT_ROOT, PYTHON_RUNNER_VENV_NAME, "Scripts", "python.exe"
