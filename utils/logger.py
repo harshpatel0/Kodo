@@ -6,16 +6,13 @@ from settings.settings import settings
 
 class SafeConsoleHandler(logging.StreamHandler):
     def emit(self, record):
-        try:
-            super().emit(record)
-        except UnicodeEncodeError:
-            msg = self.format(record)
-            stream = self.stream
-            encoded = msg.encode(stream.encoding, errors="replace").decode(
-                stream.encoding
-            )
-            stream.write(encoded + self.terminator)
-            self.flush()
+        msg = self.format(record)
+        stream = self.stream
+        encoded = msg.encode(stream.encoding, errors="replace").decode(
+            stream.encoding
+        )
+        stream.write(encoded + self.terminator)
+        self.flush()
 
 
 def setup_shared_logger(name, log_file="kodo.log"):
