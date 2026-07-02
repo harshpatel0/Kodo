@@ -89,8 +89,22 @@ def open_app(app_name, background=False):
             print(f"Launched {app_name} in background (PID: {pid})")
             return pid
         else:
-            os.startfile(target)
-            time.sleep(3)
+            aumid = target.split("shell:AppsFolder\\", 1)[1]
+            ps_command = (
+                f'$p = Start-Process -PassThru -WindowStyle Minimized '
+                f'"shell:AppsFolder\\{aumid}" '
+                f"; Start-Sleep -Seconds 3; if ($p) {{ $p.Id }}"
+            )
+            result = subprocess.run(
+                ["powershell", "-Command", ps_command],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            pid_str = result.stdout.strip()
+            if pid_str and pid_str.isdigit():
+                print(f"Launched {app_name} in background (PID: {pid_str})")
+                return int(pid_str)
             print(f"Launched {app_name} in background")
             return None
 
