@@ -87,6 +87,7 @@ class SkillInstallationMode:
         )
 
         web_emitter.thinking(response.thinking)
+        logger.debug(f"Skill installation thinking:\n{response.thinking}")
 
         raw_content = response.content if response else ""
         skills_data, _ = (
