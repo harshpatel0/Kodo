@@ -5,6 +5,7 @@ from interactions.direct_app_control.types import *
 import time
 
 from utils.logger import logger
+from settings.settings import settings
 
 from utils.globals import ALLOWED_CONTROL_TYPES, STRUCTURAL_TYPES
 
@@ -50,11 +51,19 @@ class DirectAppController:
             )
             self.connected_pid = process_id
 
-            controls = self.list_controls()
+            controls_text = ""
+            if getattr(
+                settings.direct_app_control,
+                "always_populate_connected_app_controls",
+                True,
+            ):
+                controls = self.list_controls()
+                controls_text = str(controls) if controls.controls else ""
+
             return DirectAppConnectionResult(
                 success=True,
                 message="Connected",
-                controls_text=str(controls) if controls.controls else "",
+                controls_text=controls_text,
             )
         except pywinauto.application.ProcessNotFoundError:
             return DirectAppConnectionResult(

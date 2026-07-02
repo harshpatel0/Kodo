@@ -65,13 +65,14 @@ default_settings = {
         "screenshot_quality_percentage": 80,
         "provide_uia_tree": True,
     },
-    "log_to_file": True,
     "skills": {
         "skill_timeout": 0,
     },
+    "direct_app_control": {"always_populate_connected_app_controls": True},
     "web_ui": {
         "expose_web_ui_to_all_devices_on_the_network": False,
         "desktop_streaming_quality_percentage": 85,
         "desktop_streaming_frame_rate": 30,
     },
+    "log_to_file": True,
 }

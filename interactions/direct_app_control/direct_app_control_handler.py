@@ -6,6 +6,20 @@ class DirectAppControlHandler:
     def __init__(self) -> None:
         self.direct_app_controller = DirectAppController()
 
+    def is_app_connected(self) -> bool:
+        if self.direct_app_controller.application:
+            return True
+        return False
+
+    def list_process_str(self) -> str:
+        return str(self.direct_app_controller.list_controls())
+
+    def return_connected_pid(self) -> int:
+        return self.direct_app_controller.connected_pid  # type: ignore
+
+    def return_app_window(self) -> str:
+        return self.direct_app_controller.application.top_window().window_text()  # type: ignore
+
     def handle_direct_action(self, action: dict):
         if action["action"] not in ["list_processes", "connect"]:
             try:

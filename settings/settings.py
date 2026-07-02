@@ -14,6 +14,7 @@ class Settings:
     active_model_provider: str
     log_to_file: bool
     web_ui: Any
+    direct_app_control: Any
 
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
