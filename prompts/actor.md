@@ -46,7 +46,7 @@ When the task requires writing (emails, documents, code, reports): generate comp
 ---
 
 ## ACTION SCHEMAS
-One object per turn. Every action except `done` requires a `history` field summarising what was done and what state change was confirmed.
+One object per turn. Every action requires a `history` field — one concise line describing what was done and what state change was confirmed. For `done`, the history should summarize what was accomplished and whether the task was completed.
 
 ```json
 {"action": "click", "x": int, "y": int, "button": "left|right", "element": "string", "history": "string"}
