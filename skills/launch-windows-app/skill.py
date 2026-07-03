@@ -4,6 +4,9 @@ import os
 import subprocess
 import psutil
 import time
+import ctypes
+import ctypes.wintypes
+import threading
 
 
 def get_all_windows_apps():
@@ -40,8 +43,9 @@ def get_all_windows_apps():
                 norm_name = "".join(c for c in name_lower if c.isalnum())
 
                 if norm_name not in normalized_seen:
-                    # FIX: If it's a full direct disk path (e.g., C:\Program Files\...), use it as-is.
-                    # Otherwise (if it's a UWP AppID or a Windows System GUID), route it through shell:AppsFolder
+                    is_url = app_id.startswith("http")
+                    if is_url:
+                        continue
                     if ":" in app_id and not app_id.startswith("{"):
                         app_map[name_lower] = app_id
                     else:
@@ -61,6 +65,67 @@ def get_all_windows_apps():
     return app_map
 
 
+def _launch_background(app_name, target, is_uwp):
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+    shell32 = ctypes.windll.shell32
+
+    SEE_MASK_NOCLOSEPROCESS = 0x00000040
+    SEE_MASK_FLAG_NO_UI = 0x00000400
+    SW_SHOWMINNOACTIVE = 7
+    LSFW_LOCK = 1
+    LSFW_UNLOCK = 2
+
+    user32.LockSetForegroundWindow(LSFW_LOCK)
+
+    class SHELLEXECUTEINFOW(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", ctypes.wintypes.DWORD),
+            ("fMask", ctypes.wintypes.ULONG),
+            ("hwnd", ctypes.wintypes.HWND),
+            ("lpVerb", ctypes.wintypes.LPCWSTR),
+            ("lpFile", ctypes.wintypes.LPCWSTR),
+            ("lpParameters", ctypes.wintypes.LPCWSTR),
+            ("lpDirectory", ctypes.wintypes.LPCWSTR),
+            ("nShow", ctypes.c_int),
+            ("hInstApp", ctypes.wintypes.HINSTANCE),
+            ("lpIDList", ctypes.c_void_p),
+            ("lpClass", ctypes.wintypes.LPCWSTR),
+            ("hkeyClass", ctypes.wintypes.HKEY),
+            ("dwHotKey", ctypes.wintypes.DWORD),
+            ("hIcon", ctypes.wintypes.HANDLE),
+            ("hProcess", ctypes.wintypes.HANDLE),
+        ]
+
+    sei = SHELLEXECUTEINFOW()
+    sei.cbSize = ctypes.sizeof(sei)
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI
+    sei.lpVerb = "open"
+    sei.lpFile = target
+    sei.nShow = SW_SHOWMINNOACTIVE
+    sei.hProcess = None
+
+    ok = shell32.ShellExecuteExW(ctypes.byref(sei))
+    if not ok:
+        err = kernel32.GetLastError()
+        user32.LockSetForegroundWindow(LSFW_UNLOCK)
+        print(
+            f"Failed to launch {app_name} in background (ShellExecuteExW error {err})",
+            file=sys.stderr,
+        )
+        return None
+
+    if sei.hProcess:
+        kernel32.CloseHandle(sei.hProcess)
+
+    time.sleep(4)
+
+    user32.LockSetForegroundWindow(LSFW_UNLOCK)
+
+    print(f"Launched {app_name} in background")
+    return None
+
+
 def open_app(app_name, background=False):
     if not app_name:
         print("Error: No app name.", file=sys.stderr)
@@ -76,37 +141,10 @@ def open_app(app_name, background=False):
         print(f"App {app_name} not found and could not be launched", file=sys.stderr)
         return
 
-    is_uwp = target.startswith("shell:AppsFolder")
+    is_uwp = "!" in target
 
     if background:
-        if not is_uwp:
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = 6  # SW_MINIMIZE
-
-            proc = subprocess.Popen(target, startupinfo=startupinfo)
-            pid = proc.pid
-            print(f"Launched {app_name} in background (PID: {pid})")
-            return pid
-        else:
-            aumid = target.split("shell:AppsFolder\\", 1)[1]
-            ps_command = (
-                f'$p = Start-Process -PassThru -WindowStyle Minimized '
-                f'"shell:AppsFolder\\{aumid}" '
-                f"; Start-Sleep -Seconds 3; if ($p) {{ $p.Id }}"
-            )
-            result = subprocess.run(
-                ["powershell", "-Command", ps_command],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            pid_str = result.stdout.strip()
-            if pid_str and pid_str.isdigit():
-                print(f"Launched {app_name} in background (PID: {pid_str})")
-                return int(pid_str)
-            print(f"Launched {app_name} in background")
-            return None
+        return _launch_background(app_name, target, is_uwp)
 
     deadline = time.time() + 10
 

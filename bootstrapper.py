@@ -5,6 +5,7 @@ The place to put any code that needs to be run first
 from utils.logger import logger
 import json
 from pathlib import Path
+from typing import List, Literal
 
 import mcp.shared.exceptions
 
@@ -33,3 +34,27 @@ def setup_mcps():
 
     if not mcp_registry.get_tool_schemas():
         logger.debug(f"MCP Registered: {mcp_registry.get_tool_schemas()}")
+
+
+def check_layers():
+    from utils import check_layer
+
+    enabled_layers = 0
+
+    interaction_layers: List[
+        Literal["direct_app_control", "mcps", "pc_actions", "python", "skills"]
+    ] = [
+        "direct_app_control",
+        "mcps",
+        "pc_actions",
+        "python",
+        "skills",
+    ]
+
+    for layer in interaction_layers:
+        if check_layer(layer):
+            enabled_layers += 1
+
+    if enabled_layers == 0:
+        print("At least one interaction layer needs to be enabled for Kodo to work")
+        exit(1)

@@ -1,11 +1,21 @@
 from pathlib import Path
 
 from settings.settings import settings
+from utils import check_layer
+from typing import Literal, Tuple
 
 prompts_folder = Path(__file__).parent.parent / "prompts"
 interactions_folder = Path(__file__).parent.parent / "interactions"
 
-INTERACTION_LAYERS = ["direct_app_control", "mcps", "pc_actions", "python", "skills"]
+INTERACTION_LAYERS: Tuple[
+    Literal["direct_app_control", "mcps", "pc_actions", "python", "skills"], ...
+] = (
+    "direct_app_control",
+    "mcps",
+    "pc_actions",
+    "python",
+    "skills",
+)
 
 
 def load_prompt(file: str, folder: Path = prompts_folder) -> str:
@@ -15,13 +25,6 @@ def load_prompt(file: str, folder: Path = prompts_folder) -> str:
         raise FileNotFoundError(f"Prompt file: {file} not found")
 
     return path.read_text(encoding="utf-8")
-
-
-def _layer_enabled(layer: str) -> bool:
-    try:
-        return getattr(settings.interactions, layer, True)
-    except AttributeError:
-        return True
 
 
 def construct_mode_prompt(mode: str) -> str:
@@ -34,7 +37,7 @@ def construct_mode_prompt(mode: str) -> str:
     interaction_layer_prompts = ""
 
     for interaction_layer in INTERACTION_LAYERS:
-        if not _layer_enabled(interaction_layer):
+        if not check_layer(interaction_layer):
             continue
 
         prompt_folder = interactions_folder / interaction_layer

@@ -44,3 +44,16 @@ def try_parse_json(raw: str):
 def estimate_tokens(text) -> int:
     encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(text))
+
+
+from settings.settings import settings
+from typing import Literal
+
+
+def check_layer(
+    layer: Literal["direct_app_control", "mcps", "pc_actions", "python", "skills"],
+) -> bool:
+    try:
+        return getattr(settings.interactions, layer, True)
+    except AttributeError:
+        return True
