@@ -124,7 +124,7 @@ class DirectAppController:
         return DirectAppProcessList(processes=result)
 
     def list_controls(
-        self, expand_dropdowns: bool = True
+        self, expand_dropdowns: bool = False
     ) -> DirectAppControlListResult:
         if not self.application:
             return DirectAppControlListResult(error="Not connected")
@@ -307,6 +307,11 @@ class DirectAppController:
                         success=False, message=f"Value pattern set failed: {e}"
                     )
 
+        return DirectAppInteractionResult(
+            success=False,
+            message=f"Tried all methods to interact with the control {control_id} but couldn't. Try another method",
+        )
+
     def expand(self, control_id: str) -> DirectAppInteractionResult:
         if not self.application:
             return DirectAppInteractionResult(
@@ -486,7 +491,7 @@ class DirectAppController:
             "maximize": "maximize",
             "minimize": "minimize",
             "restore": "restore",
-        }.get(interaction)
+        }[interaction]
         fn = self._get_pattern(element, method_name)
         if not fn:
             return DirectAppInteractionResult(
