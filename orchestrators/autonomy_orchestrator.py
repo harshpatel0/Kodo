@@ -185,3 +185,11 @@ History (truncated):
 
             model_provided_history = self.step_result.get("history", "None")
             self.history.append(model_provided_history)
+
+            if settings.orchestrator.autonomy_orchestrator.toast_notify_history:
+                from winotify import Notification
+
+                toast = Notification(
+                    app_id="Kodo", title="Kodo Step Result", msg=model_provided_history
+                )
+                toast.show()
