@@ -16,7 +16,17 @@ class DirectAppController:
         self.connected_pid: int | None = None
 
     def _resolve_by_runtime_id(self, window, control_id: str):
-        target = tuple(int(x) for x in control_id.split("-"))
+        parts = control_id.split("-")
+        target_parts = []
+        i = 0
+        while i < len(parts):
+            if parts[i] == "" and i + 1 < len(parts):
+                target_parts.append(-int(parts[i + 1]))
+                i += 2
+            else:
+                target_parts.append(int(parts[i]))
+                i += 1
+        target = tuple(target_parts)
         for element in window.descendants():
             if element.element_info.runtime_id == target:
                 return element
@@ -239,7 +249,13 @@ class DirectAppController:
                 message="Not connected to a window, connect to the window to interact with it",
             )
 
-        window = self.application.top_window()
+        try:
+            window = self.application.top_window()
+        except RuntimeError:
+            return DirectAppInteractionResult(
+                success=False, message="Connection lost: the target window is no longer available. Please run list_processes and connect again."
+            )
+
         element = self._resolve_by_runtime_id(window, control_id)
 
         if element is None:
