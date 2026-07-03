@@ -293,13 +293,18 @@ def call_action(
         )
 
     elif isinstance(parsed_action, DirectAppControlListResult):
-        control_list_string = str(parsed_action)
+        if parsed_action.error:
+            context = f"Controls Error: {parsed_action.error}"
+        elif parsed_action.controls:
+            context = f"Controls Found:\n{str(parsed_action)}"
+        else:
+            context = "Controls Found: (none - UIA exposes no interactive controls for this window)"
 
         action_result = ActionResult(
             signal="CONTINUE",
             step_count=step_count + 1 if not in_autonomy else None,
             iterations=iterations + 1 if in_autonomy else None,
-            additional_context=f"Controls Found: {control_list_string}",
+            additional_context=context,
         )
 
     elif isinstance(parsed_action, DirectAppInteractionResult):
