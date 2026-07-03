@@ -58,7 +58,10 @@ class DirectAppController:
                 True,
             ):
                 controls = self.list_controls()
-                controls_text = str(controls) if controls.controls else ""
+                if controls.error:
+                    controls_text = f"[Error: {controls.error}]"
+                elif controls.controls:
+                    controls_text = str(controls)
 
             return DirectAppConnectionResult(
                 success=True,
@@ -123,21 +126,13 @@ class DirectAppController:
 
         return DirectAppProcessList(processes=result)
 
-    def list_controls(
-        self, expand_dropdowns: bool = False
-    ) -> DirectAppControlListResult:
-        if not self.application:
-            return DirectAppControlListResult(error="Not connected")
-
-        try:
-            window = self.application.top_window()
-        except Exception as e:
-            return DirectAppControlListResult(error=f"Could not get window: {e}")
-
+    def _walk_descendants(
+        self, root, expand_dropdowns: bool
+    ) -> tuple[set, list[ProcessControl]]:
         seen = set()
         controls = []
 
-        for element in window.descendants():
+        for element in root.descendants():
             try:
                 ctrl_type = element.element_info.control_type
                 if ctrl_type not in ALLOWED_CONTROL_TYPES:
@@ -165,7 +160,7 @@ class DirectAppController:
 
                 try:
                     name = element.window_text().strip()
-                except:
+                except Exception:
                     name = ""
 
                 value = None
@@ -196,6 +191,42 @@ class DirectAppController:
             except Exception as e:
                 logger.debug(f"Skipped element: {e}")
                 continue
+
+        return seen, controls
+
+    def list_controls(
+        self, expand_dropdowns: bool = False
+    ) -> DirectAppControlListResult:
+        if not self.application:
+            return DirectAppControlListResult(error="Not connected")
+
+        try:
+            window = self.application.top_window()
+        except Exception as e:
+            return DirectAppControlListResult(error=f"Could not get window: {e}")
+
+        seen, controls = self._walk_descendants(window, expand_dropdowns)
+
+        # Fallback for Electron/CEF apps: top_window() may return a sub-window.
+        # Scan all Desktop-level windows for the connected PID.
+        if len(controls) < 5 and self.connected_pid:
+            try:
+                desktop = pywinauto.Desktop(backend="uia")
+                for w in desktop.windows():
+                    try:
+                        if w.process_id() != self.connected_pid:
+                            continue
+                        extra_seen, extra = self._walk_descendants(
+                            w, expand_dropdowns
+                        )
+                        for c in extra:
+                            if c.control_id not in seen:
+                                seen.add(c.control_id)
+                                controls.append(c)
+                    except Exception:
+                        continue
+            except Exception:
+                pass
 
         return DirectAppControlListResult(controls=controls)
 

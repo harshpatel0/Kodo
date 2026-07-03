@@ -50,11 +50,11 @@ class DirectAppControlListResult:
     error: str = ""
 
     def __str__(self) -> str:
+        if self.error:
+            return f"Error: {self.error}"
         string = ""
-
         for control in self.controls:
             string += f"{str(control)}\n"
-
         return string
 
 
