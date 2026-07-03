@@ -1,6 +1,7 @@
 from interactions.pc_actions.perform_pc_actions import PCActions
 from interactions.skills.skill_orchestrator import skill_orchestrator
 from utils.logger import logger
+from settings.settings import settings
 
 import time
 
@@ -24,6 +25,13 @@ from interactions.direct_app_control.direct_app_control_handler import (
 from interactions.direct_app_control.types import *
 
 
+def _layer_enabled(layer: str) -> bool:
+    try:
+        return getattr(settings.interactions, layer, True)
+    except AttributeError:
+        return True
+
+
 def parse_action(
     action: dict,
 ) -> (
@@ -38,14 +46,14 @@ def parse_action(
     return_command = "PROCEED"
     error_message = ""
 
-    if skill_orchestrator.can_handle(action.get("action")):
+    if _layer_enabled("skills") and skill_orchestrator.can_handle(action.get("action")):
         result = skill_orchestrator.execute(action)
         logger.debug(f"[SkillOrchestrator] {result}")
         return result
 
     action_type = action["action"]
 
-    if action_type in [
+    if _layer_enabled("direct_app_control") and action_type in [
         "list_processes",
         "connect",
         "list_controls",
@@ -64,7 +72,7 @@ def parse_action(
         return direct_app_handler.handle_direct_action(action=action)
 
     match action["action"]:
-        case "mcp_tool_call":
+        case "mcp_tool_call" if _layer_enabled("mcps"):
 
             mcp_call = getattr(mcp_registry, "call", None) or getattr(
                 mcp_registry, "call_tool", None
@@ -90,7 +98,7 @@ def parse_action(
             )
             return tool_call_result
 
-        case "click":
+        case "click" if _layer_enabled("pc_actions"):
             logger.debug(
                 f"Clicking at X={action['x']}, Y={action['y']} on element={action.get('element')}"
             )
@@ -106,7 +114,7 @@ def parse_action(
                 error_message = "Missing Arguments"
                 return_command = "RETRY"
 
-        case "double_click":
+        case "double_click" if _layer_enabled("pc_actions"):
             logger.debug(
                 f"Double Clicking at X={action['x']}, Y={action['y']} on element={action.get('element')}"
             )
@@ -121,22 +129,22 @@ def parse_action(
                 error_message = "Missing Arguments"
                 return_command = "RETRY"
 
-        case "type":
+        case "type" if _layer_enabled("pc_actions"):
             x = int(action["x"]) if action.get("x") is not None else None
             y = int(action["y"]) if action.get("y") is not None else None
             pc.type_text(action["text"], x, y)
 
-        case "submit":
+        case "submit" if _layer_enabled("pc_actions"):
             pc.type_text(action["text"], action.get("x"), action.get("y"))
             pc.press_key("enter")
 
-        case "press_key":
+        case "press_key" if _layer_enabled("pc_actions"):
             pc.press_key(action["key"])
 
-        case "press_hotkey":
+        case "press_hotkey" if _layer_enabled("pc_actions"):
             pc.press_hotkey(action["keys"])
 
-        case "drag":
+        case "drag" if _layer_enabled("pc_actions"):
             pc.drag(
                 from_x=int(action["from_x"]),
                 from_y=int(action["from_y"]),
@@ -145,28 +153,28 @@ def parse_action(
                 button=action.get("button", "left"),
             )
 
-        case "scroll_v":
+        case "scroll_v" if _layer_enabled("pc_actions"):
             pc.vscroll(
                 scroll_amount=action["amount"],
                 position_x=action["x"],
                 position_y=action["y"],
             )
 
-        case "scroll_h":
+        case "scroll_h" if _layer_enabled("pc_actions"):
             pc.hscroll(
                 scroll_amount=action["amount"],
                 position_x=action["x"],
                 position_y=action["y"],
             )
 
-        case "clear_field":
+        case "clear_field" if _layer_enabled("pc_actions"):
             pc.click(action.get("x"), action.get("y"))
             time.sleep(0.1)  # let the target element receive focus
             pc.press_hotkey(["ctrl", "a"])
             time.sleep(0.05)  # let select-all complete
             pc.press_key("backspace")
 
-        case "python":
+        case "python" if _layer_enabled("python"):
             result = pyrun.run(action["code"])
             return result
 

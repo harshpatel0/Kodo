@@ -16,7 +16,7 @@ def run_externally(task: str, mode_override: str | None = None):
     if is_using_autonomy_mode:
         autonomy_orchestrator = AutonomyOrchestrator(task=task)
 
-        if not settings.orchestrator.autonomy_orchestrator.no_skill_installation_mode:
+        if not settings.interactions.no_skill_installation_mode:
             autonomy_orchestrator.run_skill_installation_mode()
         autonomy_orchestrator.run()
     else:

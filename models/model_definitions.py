@@ -10,8 +10,9 @@ from models.provider import get_provider, ChatMessage, ChatResponse
 from server.log_stream import web_emitter
 
 import utils.utils as utils
-import utils.strings as Strings
 from utils.logger import logger
+
+import prompts
 
 from settings.settings import settings
 
@@ -32,8 +33,8 @@ def _get_actor_config():
 
 def _get_actor_system_prompt():
     if USING_AUTONOMY_MODE:
-        return Strings.AUTONOMY_MODE_SYSTEM_PROMPT
-    return Strings.ACTOR_BASE_SYSTEM_PROMPT
+        return prompts.AUTONOMY_MODE_SYSTEM_PROMPT
+    return prompts.ACTOR_SYSTEM_PROMPT
 
 
 def estimate_tokens(text: str) -> int:
@@ -55,7 +56,7 @@ class SkillInstallationMode:
         return skill_orchestrator.loaded_skills
 
     def run(self, task):
-        system_prompt = Strings.SKILL_INSTALLATION_PROMPT
+        system_prompt = prompts.SKILL_INSTALLATION_PROMPT
         system_prompt = (
             system_prompt
             + "\nHere are the available skills: "
@@ -77,7 +78,7 @@ class SkillInstallationMode:
 
         cfg = settings.models.skill_installation
         provider = get_provider(cfg)
-        response = provider.chat(
+        response: ChatResponse = provider.chat(
             messages=messages,
             model=cfg.model_name,
             temperature=cfg.temperature,
@@ -86,7 +87,7 @@ class SkillInstallationMode:
             thinking=getattr(cfg, "thinking", False),
         )
 
-        web_emitter.thinking(response.thinking)
+        web_emitter.thinking(response.thinking or "")
         logger.debug(f"Skill installation thinking:\n{response.thinking}")
 
         raw_content = response.content if response else ""
@@ -121,10 +122,10 @@ class SkillInstallationMode:
 
 
 class PlannerModel:
-    system_prompt = Strings.PLANNER_BASE_SYSTEM_PROMPT
+    system_prompt = prompts.PLANNER_SYSTEM_PROMPT
 
     def __init__(self):
-        self.base_system_prompt = Strings.PLANNER_BASE_SYSTEM_PROMPT
+        self.base_system_prompt = prompts.PLANNER_SYSTEM_PROMPT
 
     def run(self, task, skills=None):
         user_prompt = f"""

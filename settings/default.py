@@ -45,6 +45,14 @@ default_settings = {
             "attach_screenshot_of_active_window": True,
         },
     },
+    "interactions": {
+        "direct_app_control": True,
+        "mcps": True,
+        "pc_actions": True,
+        "python": True,
+        "skills": True,
+        "no_skill_installation_mode": True,
+    },
     "orchestrator": {
         "action_settle_time": 4,
         "use_autonomy_mode": True,
@@ -55,7 +63,6 @@ default_settings = {
         },
         "autonomy_orchestrator": {
             "max_total_iterations": 50,
-            "no_skill_installation_mode": True,
             "toast_notify_history": False,
         },
     },
