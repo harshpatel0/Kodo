@@ -28,3 +28,9 @@ One valid JSON object. No preamble, no markdown fences.
 ## MCPs
 
 All MCPs are automatically installed by default, no need to call what MCPs is needed to complete the task. The MCPs are shown to you as reference. You should prioritise MCPs, so if a skill and MCP conflict in use cases, don't install the skill.
+
+## MCP Companion Skills
+
+Some skills are documentation companions for an MCP server (marked `[accompanies MCP: <server_name>]` in the skill list). These skills teach the actor how to use the MCP's tools with usage patterns, sequencing rules, and examples.
+
+**If a task requires an MCP server, also install any skill that accompanies it.** The companion skill improves the actor's ability to use the MCP effectively. Installing a companion skill alongside its MCP is always beneficial and never harmful.

@@ -43,6 +43,7 @@ Every skill must have a `skill.json`. It is the only required file.
 | `dynamic_context` | boolean | No | If `true`, the entry point generates guidance at runtime via `--generate`. |
 | `generated_for_planner` | boolean | No | Used with `dynamic_context`. Indicates the generator produces planner guidance. |
 | `generated_for_actor` | boolean | No | Used with `dynamic_context`. Indicates the generator produces actor guidance. |
+| `accompanies_mcp` | string | No | Name of an MCP server this skill provides usage guidance for. When set, the skill selector will install this skill alongside the MCP. The value must match the MCP server's `name` in `mcp_servers.json`. |
 
 ### Entry Point Rules
 
@@ -340,6 +341,8 @@ Teaches the Actor **how** to invoke actions and recover from failure.
 - [ ] `.md` files are present when the skill is not dynamically generated; at minimum
       one of `planner_skill.md` or `actor_skill.md` must exist.
 - [ ] Skill folder name matches the `name` field in `skill.json`.
+- [ ] `accompanies_mcp` set when the skill is a documentation companion for an MCP server;
+      value must match the MCP server's `name` in `mcp_servers.json`.
 
 ---
 
