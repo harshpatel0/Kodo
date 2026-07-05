@@ -9,9 +9,12 @@ default_settings = {
             "api_key_env_var": "ANTHROPIC_API_KEY",
             "base_url": None,
             "effort": "medium",
+            "use_caching": False,
         },
         "google": {
             "api_key_env_var": "GOOGLE_API_KEY",
+            "use_caching": False,
+            "cache_ttl_seconds": 300,
         },
     },
     "models": {
