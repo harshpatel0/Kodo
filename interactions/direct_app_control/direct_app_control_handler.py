@@ -1,5 +1,28 @@
+import ctypes
+from ctypes import wintypes
+
 from interactions.direct_app_control.direct_app_control import DirectAppController
 from interactions.direct_app_control.types import *
+
+
+def _save_foreground():
+    try:
+        return ctypes.windll.user32.GetForegroundWindow()
+    except Exception:
+        return None
+
+
+def _restore_foreground(hwnd):
+    if not hwnd:
+        return
+    try:
+        user32 = ctypes.windll.user32
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        user32.AllowSetForegroundWindow(pid)
+        user32.SetForegroundWindow(hwnd)
+    except Exception:
+        pass
 
 
 class DirectAppControlHandler:
@@ -21,6 +44,14 @@ class DirectAppControlHandler:
         return self.direct_app_controller.application.top_window().window_text()  # type: ignore
 
     def handle_direct_action(self, action: dict):
+        previous_fg = _save_foreground()
+
+        try:
+            return self._handle(action)
+        finally:
+            _restore_foreground(previous_fg)
+
+    def _handle(self, action: dict):
         if action["action"] not in ["list_processes", "connect"]:
             try:
                 control_id = action["control_id"]
