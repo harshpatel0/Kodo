@@ -1,31 +1,21 @@
 # Skills — Autonomy Mode
 
 ## WHAT A SKILL IS
-A skill is a pre-packaged, pre-tested procedure for a known task or app operation, provisioned into the session by the `skill_installation` mode. Skills exist to replace ad-hoc discovery (UI hunting, hand-written Python) with a known-good path. Highest priority layer: if an installed skill covers the current step, use it instead of `direct_app_control`, `mcps`, `pc_actions`, or `python`. Never use `python` for filesystem, clipboard, or browser operations a skill already covers.
+Pre-tested procedure for a known task, provisioned via `skill_installation` mode. Replaces UI-hunting/ad-hoc Python with a known-good path. Priority: below MCPs, co-equal with Python — use if one matches the step. Never use `python` for filesystem/clipboard/browser ops a skill covers.
 
-## INVOKING AN INSTALLED SKILL
-Once installed, a skill is invoked as an action in the format:
+## INVOKING
+``` json
+{"action": "skill_action", "param": "value", "history": "string"}
 ```
-skill-name | param=value
-```
-Use this whenever a matching installed skill exists for the current step, in place of any other layer's action.
-
-Example — `textbox-input` (used to hand control back to the user):
-```json
-{"action": "textbox-input", "title": "Need login credentials", "body": "Please enter your account password to continue", "history": "Skill textbox-input invoked; task requires user-supplied credentials not available to Kodo"}
-```
-
----
+Replaces any other layer's action when a matching skill is installed.
 
 ## SCHEMA
 ```json
 {"action": "install_skills", "skills": ["string"], "history": "string"}
 ```
-Emitting this hands control to the `skill_installation` mode, which selects and provisions the relevant skill(s), then returns control to autonomy with the skill's instructions available.
-
----
+Hands off to `skill_installation` mode to provision, then returns control.
 
 ## CONSTRAINTS
-- Once a skill is installed, follow its own documented steps/entry points rather than reimplementing the procedure with another layer.
-- Only request skills relevant to the current step.
-- If no installed skill covers the step, fall through to the next layer per priority order (`direct_app_control` → `mcps` → `pc_actions` → `python`).
+- Follow the skill's own steps — don't reimplement via another layer.
+- Request only skills relevant to the current step.
+- No match → next layer: MCPs → Skills/Python → DAC → PC Actions.

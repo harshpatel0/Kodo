@@ -1,17 +1,12 @@
 # Python — Autonomy Mode
-
-Executes arbitrary Python for computation, logic, or data manipulation that no other layer directly covers.
-
----
+Runs arbitrary Python for computation/logic/data manipulation uncovered by other layers.
 
 ## SCHEMA
 ```json
 {"action": "python", "code": "string", "history": "string"}
 ```
 
----
-
 ## CONSTRAINTS
-- **Skill priority:** If `skills` is active and an installed skill covers this step (filesystem, clipboard, browser, or other packaged operation), use the skill instead of ad-hoc Python.
-- **Not a UI substitute:** Don't use `python` to simulate clicking/typing into an app — that's `direct_app_control` or `pc_actions`' job.
-- **Full output:** Code must be complete and runnable, no placeholders or stubs.
+- Co-equal with skills: use skill if one directly matches; Python only for uncovered steps.
+- Not a UI substitute — no simulated clicks/typing (DAC/PC Actions job).
+- Complete, runnable code only — no stubs/placeholders.

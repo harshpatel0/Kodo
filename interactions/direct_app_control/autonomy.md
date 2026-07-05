@@ -1,80 +1,49 @@
-# Direct App Control (UIA) — Autonomy Mode
+## DIRECT APP CONTROL (DAC)
 
-Controls running Windows apps in the background via UI Automation. No focus stealing, no mouse/keyboard takeover, no visible cursor movement — the user can keep working while this runs. Always try this before falling back to `pc_actions`.
+UIA-based control of running apps — no focus steal, no cursor movement. Try before `pc_actions`. App need not be focused or foregrounded to control.
 
-You do not need to bring the app into focus to use Direct App Control. As long as you're confident the app is launched, hook into it directly — that's the whole point: never steal focus from the user.
+**If already open:** never `open_app`/navigate. Go straight to `list_processes` → `connect` → act. Skip verification via screenshot/tree — DAC's control list is authoritative.
 
-The accessibility tree from `pc_actions` only shows the currently focused window. Direct App Control bypasses this — it can discover, connect to, and control any running app regardless of focus. Use `list_processes` to discover apps; don't rely on tree/focus state.
+**If connect fails** (claimed-open app not found): `retry` once with fresh `list_processes`, then `stuck` if still absent — don't guess-launch.
 
-**Testing status:** In active testing — prefer it. If a task is not feasible with Direct App Control because it requires focus, do not attempt a workaround: surface a toast notification explaining what happened in detail and call `done` prematurely.
+### SEQUENCE
+1. `list_processes` → pick `process_id`. Always first, never skipped.
+2. `connect` → attaches; auto-runs `list_controls` if `always_populate_connected_app_controls` (default true) — use that response, don't re-call.
+3. Act on `control_id` matching control `type`.
+4. Container reveals new children (e.g. `expand`) → re-`list_controls` for fresh IDs before touching them.
 
----
+Re-`connect` to switch apps freely, no disconnect needed.
 
-## RULE: NEVER LAUNCH OR NAVIGATE IF THE APP IS ALREADY OPEN
-
-If the task or user tells you an app is already running (e.g. "Edge is already open", "the form is open in the browser"), **do not launch it**. Do not navigate to a URL, do not use `open_app`, do not use pc_actions to find a window. Start directly with:
-
-1. **`list_processes`** — find the running process
-2. **`connect(process_id)`** — attach to it
-3. Proceed with `list_controls` and interact
-
-**Do not verify** the connection via screenshots, pc_actions, or the accessibility tree. The DAC control tree is authoritative — if you're connected, you have the controls. Proceed immediately.
-
----
-
-## SCHEMAS
+### SCHEMAS
 ```json
 {"action": "list_processes", "history": "string"}
 {"action": "connect", "process_id": int, "history": "string"}
 {"action": "list_controls", "history": "string"}
-{"action": "interact", "control_id": "string", "value": "string (optional, for value-supporting controls like Edit, or ComboBox fallback)", "history": "string"}
+{"action": "interact", "control_id": "string", "value": "string?", "history": "string"}
 {"action": "expand", "control_id": "string", "history": "string"}
 {"action": "collapse", "control_id": "string", "history": "string"}
 {"action": "set_value", "control_id": "string", "value": "string", "history": "string"}
 {"action": "scroll", "control_id": "string", "direction": "up|down|left|right", "amount": "line|page", "history": "string"}
 {"action": "set_range_value", "control_id": "string", "value": float, "history": "string"}
 {"action": "get_grid_item", "control_id": "string", "row": int, "col": int, "history": "string"}
-{"action": "minimize_window", "control_id": "string", "history": "string"}
-{"action": "maximize_window", "control_id": "string", "history": "string"}
-{"action": "restore_window", "control_id": "string", "history": "string"}
-{"action": "close_window", "control_id": "string", "history": "string"}
+{"action": "minimize_window|maximize_window|restore_window|close_window", "control_id": "string", "history": "string"}
 ```
 
----
+### NOTES
+- **IDs are session-scoped**, not stable across restart/reconnect — always fresh from `list_controls`.
+- **Hidden-but-listed control** ("Control not found" on interact): likely gated by a trigger (e.g. conditional field). Find trigger, interact, re-list.
+- **ComboBox, in order:** (1) `set_value` on the ComboBox itself with target text — works collapsed, no focus needed. (2) If fails: `expand` → `list_controls` → `interact` on the revealed ListItem. (3) If both fail: `pc_actions` click.
+- **ComboBox items are visible pre-expand** in `list_controls` — no need to `expand` just to see options.
+- **Minimized/background windows appear in `list_processes`** if titled — connect regardless of window state.
+- **Structural containers (Pane/Group/wrapper Window/Custom) are pre-filtered** from `list_controls` — don't target them.
+- **Focus:** all patterns here are focus-neutral by spec; some browser `Invoke` providers may steal focus anyway — if seen, prefer `Select` on the ListItem, or `set_value` on the parent ComboBox. Genuine focus-required input → fall back to `pc_actions`.
+- **Infeasible-without-focus task:** don't force it through `pc_actions` as workaround here — toast the detail, `done` early.
+- Every response returns `{success, method, message}` — `method` reveals which UIA pattern fired; "no supported pattern" means wrong action for that control type (e.g. Slider wants `set_range_value`).
 
-## MANDATORY INTERACTION SEQUENCE
-1. **`list_processes`** — discover running top-level windows → pick the right `process_id`. This is always step one. Never skip it.
-2. **`connect`** — attach to that `process_id`. When `direct_app_control.always_populate_connected_app_controls` is `true` (default), `connect` auto-runs `list_controls` and returns the control tree in its response — you can skip the separate call. Must be done before any other control action.
-3. **Evaluate & Act:** Pick the matching action based on the control `type` and act using its `control_id`. Trust the control list — do not cross-reference with screenshots or pc_actions.
-4. **Dynamic UI Updates:** If interacting with a container reveals new items (e.g. `expand` on a ComboBox), you **MUST run `list_controls` again** to get runtime IDs of newly revealed child elements before selecting them.
-
-You can re-`connect` to switch apps. No explicit disconnect needed.
-
----
-
-## NOTES & CONSTRAINTS
-- **Connection first:** Must connect before `list_controls` or any action — calls fail with "Not connected" otherwise.
-- **Unstable IDs:** `control_id` is a session-scoped runtime ID. Not stable across app restarts or re-connects. Always get fresh IDs from `list_controls` after connecting.
-- **DAC exposes CSS-hidden controls:** The UIA tree includes elements hidden by CSS (`display: none`). If a control appears in `list_controls` but `interact` returns "Control not found", it may be gated by a conditional field (e.g. a dropdown that only appears after selecting an option). Find the trigger control first, interact with it, then re-list controls.
-- **ComboBoxes/Dropdowns — priority order:**
-  1. Use `set_value` on the ComboBox directly with the desired option text as the value. The handler finds the matching ListItem child and fires Select+Invoke internally — even when the dropdown is collapsed. This is the preferred method because it does not require focus or expand.
-  2. If `set_value` fails, try `expand` the ComboBox, run `list_controls` to find the newly visible ListItem, then `interact` with that ListItem. The handler fires both `Select` and `Invoke` — this ensures JavaScript `change` events fire on HTML `<select>` elements.
-  3. If both fail, use `pc_actions` to click the dropdown and its option.
-- **ComboBox items visible in list_controls:** ComboBox ListItems are shown in `list_controls` even when the dropdown is collapsed. You can see all options without calling `expand`. To pick one, use `interact` on the ListItem directly, or `set_value` on the parent ComboBox.
-- **Minimized windows included in list_processes:** `list_processes` now shows windows even when minimized or in the background, as long as they have a title. You can `connect` to any listed PID regardless of window state.
-- **Filtered controls:** Structural containers (Pane, Group, Window-as-wrapper, Custom) are filtered out of `list_controls` — don't try to interact with them.
-- **Debugging:** Every action returns `{success, method, message}`. `method` tells you which UIA pattern fired (e.g. "toggle", "value_pattern", "legacy"). "No supported pattern" means the control needs a different function (e.g. a Slider needs `set_range_value`, a ComboBox needs `expand`).
-- **Focus limits:** DAC does NOT steal focus. All UIA patterns used (Select, SetValue, Toggle, Expand, Scroll, RangeValue) are focus-neutral per spec. `Invoke` is also spec'd as focus-neutral, but some browser providers may still steal focus — if you observe this, use `Select` on ListItems instead (it triggers JS `change` events without Invoke on most sites), or use `set_value` directly on the parent ComboBox. If a task genuinely requires focus-based input, fall back to `pc_actions`.
-
----
-
-## EXAMPLES
+### EXAMPLES
 ```json
-{"action": "list_processes", "history": "Listing available windows"}
+{"action": "list_processes", "history": "Listing windows"}
 {"action": "connect", "process_id": 1234, "history": "Connected to notepad.exe"}
-{"action": "list_controls", "history": "Listing all controls in the connected window"}
-{"action": "interact", "control_id": "12-345678-9", "history": "Clicked Edit button"}
 {"action": "set_value", "control_id": "12-345678-9", "value": "hello world", "history": "Typed into edit field"}
-{"action": "scroll", "control_id": "12-345678-9", "direction": "down", "amount": "line", "history": "Scrolled down one line"}
-{"action": "expand", "control_id": "12-345678-10", "history": "Expanded ComboBox to reveal dropdown options"}
+{"action": "expand", "control_id": "12-345678-10", "history": "Expanded ComboBox"}
 ```
