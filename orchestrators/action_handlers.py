@@ -174,7 +174,7 @@ The code/skill took too long to run and was killed prematurely. Here are the log
         return ActionResult(
             signal="CONTINUE",
             additional_context=additional_context + f"""
-THe skill provided the following output with a severe error
+The skill provided the following output with a severe error
 
 ## Output
 {action_result_stdout}

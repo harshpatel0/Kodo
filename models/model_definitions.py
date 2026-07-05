@@ -130,11 +130,17 @@ class PlannerModel:
     def run(self, task, skills=None):
         user_prompt = f"""
 # PC Environment
+OS: {context_provider.WINDOWS_VERSION}
+Screen: {context_provider.screen_width}x{context_provider.screen_height}
 Active Window: "{context_provider.get_active_window()}"
 
 Current Taskbar Setup Accessibility Tree
 {context_provider.get_taskbar_elements()}
 
+User Task: {task}
+
+# Registered MCP Servers
+{mcp_registry.get_tool_schemas()}
 """
         system_prompt = ""
 
@@ -143,19 +149,6 @@ Current Taskbar Setup Accessibility Tree
             and settings.models.planner.model_name.startswith("gemma")
         ):
             system_prompt = system_prompt + "<|think|>"
-
-        # Populate context that stays constant
-
-        system_prompt = system_prompt + f"""
-# PC Environment
-OS: {context_provider.WINDOWS_VERSION}
-Screen: {context_provider.screen_width}x{context_provider.screen_height}
-
-User Task: {task}
-
-# Registered MCP Servers
-{mcp_registry.get_tool_schemas()}
-"""
 
         system_prompt = system_prompt + self.base_system_prompt
 
@@ -205,7 +198,7 @@ Treat skill actions as first-class actions alongside the standard ones above.
 {skills}
 """
 
-    def construct_system_prompt(self, task=None, skills=None):
+    def construct_system_prompt(self, skills=None):
         if self.system_prompt == "":
             system_prompt = ""
 
@@ -223,24 +216,16 @@ OS: {context_provider.WINDOWS_VERSION}
 Screen: {context_provider.screen_width}x{context_provider.screen_height}
 
     """
-            if USING_AUTONOMY_MODE:
-                if not task:
-                    raise ValueError(
-                        "Constructing a system prompt in autonomy mode requires the task"
-                    )
-                system_prompt = system_prompt + f"""
-Task: {task}
-"""
             self.system_prompt = system_prompt
 
         return self.system_prompt
 
-    def construct_user_prompt(self, task, instruction, expected_result):
+    def construct_user_prompt(self, task, instruction=None, expected_result=None):
+        instruction_line = f"\nInstructions: {instruction}" if instruction else ""
+        expected_line = f"\nExpected Result: {expected_result}" if expected_result else ""
         user_prompt = f"""
 # Step Context
-Current Task: {task}
-{'Instructions: ' + instruction if instruction else ''}
-{'Expected Result ' + expected_result if expected_result else ''}
+Current Task: {task}{instruction_line}{expected_line}
 
 # App Context
 Active Window: {context_provider.get_active_window()}
@@ -256,8 +241,6 @@ Taskbar Elements
 
 # Registered MCP Servers
 {mcp_registry.get_tool_schemas()}
-
-# Additional Context is provided below (if the orchestrator has anything to say)
 """
         return user_prompt
 
@@ -265,7 +248,7 @@ Taskbar Elements
         self,
         user_prompt,
         additional_context,
-        accompanying_message="A previous run of this step resulted in a `STUCK` or `RETRY` handoff, the agent gave instructions to you on how to recover, execute accordingly: ",
+        accompanying_message="Additional context from the previous step:",
     ):
         user_prompt = user_prompt + f"\n{accompanying_message}\n{additional_context}"
         return user_prompt
