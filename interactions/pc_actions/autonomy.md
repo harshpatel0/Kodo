@@ -20,7 +20,7 @@ Universal fallback input — works on any app, including ones incompatible with 
 
 ## CONSTRAINTS
 - **No blind focus:** Never emit `type` or `submit` without the target field confirmed as focused in the current tree.
-- **Dual-source coordination:** Use the accessibility tree for element coordinates. Use the screenshot for spatial layout and elements absent from the tree. When they conflict, favour whichever better reflects the actual interactive state.
+- **Coordinate source of truth:** Use coordinates from the accessibility tree when the target element is present there. Use the screenshot only for elements the tree genuinely does not expose (canvas, custom widgets, web views). **When both are available, trust the accessibility tree** — it reflects the live, interactive state. The screenshot can be stale or misleading.
 
 ---
 
