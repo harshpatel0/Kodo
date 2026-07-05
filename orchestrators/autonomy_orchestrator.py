@@ -7,8 +7,27 @@ from models.model_definitions import SkillInstallationMode
 from utils import logger
 from settings.settings import settings
 from result_types import ActionResult
+from mcp.types import CallToolResult, TextContent
+from interactions.skills.types import KodoSkillResult
 
 from utils import estimate_tokens
+
+DAC_ACTIONS = {
+    "list_processes",
+    "connect",
+    "list_controls",
+    "interact",
+    "expand",
+    "collapse",
+    "set_value",
+    "scroll",
+    "set_range_value",
+    "get_grid_item",
+    "minimize_window",
+    "maximize_window",
+    "restore_window",
+    "close_window",
+}
 
 
 def truncate_data_list(item: list[str], max_tokens=400) -> list[str]:
@@ -71,6 +90,80 @@ class AutonomyOrchestrator:
         self.replan_history = []
         self.temp_task = None
         self.step_result: dict = {}
+
+    def _make_deterministic_history(
+        self, ar: ActionResult, step_result: dict
+    ) -> str | None:
+        action = step_result.get("action", "")
+        if not action:
+            return None
+
+        is_tool = False
+        is_dac_error = False
+
+        if action == "mcp_tool_call":
+            is_tool = True
+        elif action == "python":
+            is_tool = True
+        elif action in DAC_ACTIONS:
+            raw = ar.raw_result
+            if raw is not None:
+                error = getattr(raw, "error", None) or getattr(
+                    raw, "error_message", None
+                )
+                success = getattr(raw, "success", None)
+                if error or (success is not None and not success):
+                    is_dac_error = True
+        elif skill_orchestrator.can_handle(action):
+            is_tool = True
+
+        if not is_tool and not is_dac_error:
+            return None
+
+        intent = step_result.get("history", "")
+        summary = self._summarize_raw_result(ar.raw_result)
+        if not summary:
+            return intent
+        if len(intent) + len(summary) < 300:
+            return f"{intent} | {summary}"
+        return f"{intent} | {summary[:250]}..."
+
+    def _summarize_raw_result(self, raw) -> str | None:
+        if raw is None:
+            return None
+
+        if isinstance(raw, CallToolResult):
+            texts = [
+                b.text
+                for b in raw.content
+                if isinstance(b, TextContent) and b.text.strip()
+            ]
+            if not texts:
+                return None
+            combined = "; ".join(texts)
+            error_tag = " [ERROR]" if raw.isError else ""
+            if len(combined) <= 200:
+                return f"{combined}{error_tag}"
+            return f"{combined[:197]}{error_tag}..."
+
+        if isinstance(raw, KodoSkillResult):
+            parts = []
+            if raw.skill_output:
+                parts.append(raw.skill_output[:200])
+            if raw.result in ("ERROR", "TIMEOUT") and raw.skill_errors:
+                err = raw.skill_errors[:200]
+                parts.append(f"error: {err}")
+            return " | ".join(parts) if parts else None
+
+        error = getattr(raw, "error", None) or getattr(raw, "error_message", None)
+        if error:
+            return f"error: {str(error)[:200]}"
+
+        message = getattr(raw, "message", None)
+        if message:
+            return str(message)[:200]
+
+        return None
 
     def _apply(self, ar: ActionResult) -> None:
         if ar.step_count is not None:
@@ -190,6 +283,7 @@ History (truncated):
 
             if self.step_result.get("install_skills"):
                 self._handle_skill_installation(self.step_result["skills"])
+                self.history.append(self.step_result.get("history", "None"))
 
             else:
                 ar = call_action(
@@ -202,15 +296,21 @@ History (truncated):
                 self._apply(ar)
                 time.sleep(settings.orchestrator.action_settle_time)
 
-            # Append to history
+                # Append to history
+                # Use actual tool result for deterministic tools, fall back to model's self-reported history for everything else
+                deterministic = self._make_deterministic_history(ar, self.step_result)
+                if deterministic:
+                    self.history.append(deterministic)
+                else:
+                    model_provided_history = self.step_result.get("history", "None")
+                    self.history.append(model_provided_history)
 
-            model_provided_history = self.step_result.get("history", "None")
-            self.history.append(model_provided_history)
+                if settings.orchestrator.autonomy_orchestrator.toast_notify_history:
+                    from winotify import Notification
 
-            if settings.orchestrator.autonomy_orchestrator.toast_notify_history:
-                from winotify import Notification
-
-                toast = Notification(
-                    app_id="Kodo", title="Kodo Step Result", msg=model_provided_history
-                )
-                toast.show()
+                    toast = Notification(
+                        app_id="Kodo",
+                        title="Kodo Step Result",
+                        msg=deterministic or self.step_result.get("history", "None"),
+                    )
+                    toast.show()
