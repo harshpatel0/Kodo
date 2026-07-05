@@ -10,8 +10,10 @@ MAX_ITERATIONS_PER_STEP = (
 )
 MAX_REPLAN_LOOP = settings.orchestrator.planner_architecture.max_replan_loop
 
-from result_types import KodoSkillResult, PrimitiveActionResult, ActionResult
+from result_types import PrimitiveActionResult, ActionResult
 from interactions.direct_app_control.types import *
+
+from interactions.skills.types import KodoSkillResult
 
 
 def handle_proceed(step_count: int, iterations: int, in_autonomy: bool) -> ActionResult:

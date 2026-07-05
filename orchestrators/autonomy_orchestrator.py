@@ -6,7 +6,7 @@ from interactions.skills.skill_orchestrator import skill_orchestrator
 from models.model_definitions import SkillInstallationMode
 from utils import logger
 from settings.settings import settings
-from result_types import ActionResult, KodoSkillResult
+from result_types import ActionResult
 
 from utils import estimate_tokens
 
