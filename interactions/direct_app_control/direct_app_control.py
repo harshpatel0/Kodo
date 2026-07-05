@@ -103,20 +103,11 @@ class DirectAppController:
                 class_name = w.element_info.class_name
                 rect = w.rectangle()
 
-                # 1. Skip completely invisible service/background hosts
-                # EXCEPT for the known UWP app shell wrapper class.
-                if not w.is_visible() and class_name != "ApplicationFrameWindow":
+                # 1. Skip windows without dimensions (0x0 background triggers / pure services)
+                if rect.width() <= 0 or rect.height() <= 0:
                     continue
 
-                # 2. Filter out windows without dimensions (0x0 background triggers)
-                if (
-                    rect.width() <= 0 or rect.height() <= 0
-                ) and class_name != "ApplicationFrameWindow":
-                    continue
-
-                # 3. Filter out system/background artifacts that have empty titles
-                # (Standard UWP apps like Settings will be caught via ApplicationFrameWindow)
-                if not title and class_name != "ApplicationFrameWindow":
+                if not w.is_visible() and not title:
                     continue
 
                 # 4. Skip common background background host components that aren't real apps
@@ -226,9 +217,7 @@ class DirectAppController:
                     try:
                         if w.process_id() != self.connected_pid:
                             continue
-                        extra_seen, extra = self._walk_descendants(
-                            w, expand_dropdowns
-                        )
+                        extra_seen, extra = self._walk_descendants(w, expand_dropdowns)
                         for c in extra:
                             if c.control_id not in seen:
                                 seen.add(c.control_id)
@@ -253,7 +242,8 @@ class DirectAppController:
             window = self.application.top_window()
         except RuntimeError:
             return DirectAppInteractionResult(
-                success=False, message="Connection lost: the target window is no longer available. Please run list_processes and connect again."
+                success=False,
+                message="Connection lost: the target window is no longer available. Please run list_processes and connect again.",
             )
 
         element = self._resolve_by_runtime_id(window, control_id)
@@ -263,7 +253,10 @@ class DirectAppController:
                 success=False, message="Control not found"
             )
 
-        # Check for standard Invoke (Buttons)
+        # Check for standard Invoke (Buttons, ListItems, etc.)
+        # Per UIA spec, Invoke() does NOT set focus. However, some browser UIA providers
+        # may break the spec and steal focus anyway. If focus theft is observed, the model
+        # should fall back to alternative patterns (e.g. Select + set_value on parent).
         invoke = self._get_pattern(element, "iface_invoke")
         if invoke:
             try:
@@ -294,13 +287,28 @@ class DirectAppController:
         if select:
             try:
                 select.Select()
-                return DirectAppInteractionResult(
-                    success=True, method="select", message="Selected control"
-                )
             except Exception as e:
                 return DirectAppInteractionResult(
                     success=False, message=f"Selection failed: {e}"
                 )
+
+            # Also try Invoke after Select, which is needed for HTML <select> dropdowns in browsers.
+            # SelectionItem.Select() sets the UIA value programmatically but does NOT fire the
+            # JavaScript 'change' event on the <select> element. Invoke simulates a real click,
+            # which does trigger the JS event.
+            # Skip Invoke for RadioButtons, they only need Select, and Invoke on them might
+            # accidentally toggle the selection off or steal focus in some providers.
+            if element.element_info.control_type != "RadioButton":
+                invoke = self._get_pattern(element, "iface_invoke")
+                if invoke:
+                    try:
+                        invoke.Invoke()
+                    except Exception:
+                        pass
+
+            return DirectAppInteractionResult(
+                success=True, method="select", message="Selected control"
+            )
 
         # Handle ComboBoxes by expanding them, or setting value directly
         if element.element_info.control_type == "ComboBox":
