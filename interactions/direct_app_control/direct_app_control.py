@@ -146,7 +146,10 @@ class DirectAppController:
                 if rect.width() == 0 or rect.height() == 0:
                     continue
 
-                if not element.is_visible():
+                # Show ListItem children of ComboBoxes even when collapsed.
+                # UIA keeps ComboBox items in the tree but marks them invisible
+                # when the dropdown is closed.
+                if not element.is_visible() and ctrl_type != "ListItem":
                     continue
 
                 if expand_dropdowns:
@@ -457,8 +460,38 @@ class DirectAppController:
                 return DirectAppInteractionResult(
                     success=False, message=f"Legacy set failed: {e}"
                 )
+
+        # ComboBox fallback: find the matching ListItem child and Select+Invoke it.
+        # This works without expand because UIA ListItems accept SelectionItem.Select()
+        # even when the dropdown is collapsed.
+        if element.element_info.control_type == "ComboBox":
+            for child in element.descendants():
+                try:
+                    if child.element_info.control_type != "ListItem":
+                        continue
+                    child_name = child.window_text().strip()
+                    if child_name != value:
+                        continue
+                    select = self._get_pattern(child, "iface_selection_item")
+                    if not select:
+                        continue
+                    select.Select()
+                    invoke = self._get_pattern(child, "iface_invoke")
+                    if invoke:
+                        try:
+                            invoke.Invoke()
+                        except Exception:
+                            pass
+                    return DirectAppInteractionResult(
+                        success=True,
+                        method="combo_select",
+                        message=f"Selected '{value}' in ComboBox",
+                    )
+                except Exception:
+                    continue
+
         return DirectAppInteractionResult(
-            success=False, message="No non-focus-stealing pattern available"
+            success=False, message="No usable pattern found on this control"
         )
 
     def scroll(
