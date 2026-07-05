@@ -75,7 +75,9 @@ def parse_action(
                 mcp_registry, "call_tool", None
             )
 
-            if not mcp_registry.check_tool(action["tool"]):
+            tool_name = action["tool"].split(":", 1)[-1] if ":" in action["tool"] else action["tool"]
+
+            if not mcp_registry.check_tool(tool_name):
                 return CallToolResult(
                     content=[
                         TextContent(
@@ -91,7 +93,7 @@ def parse_action(
                     "mcps.mcp_registry has no callable 'call' or 'call_tool'"
                 )
             tool_call_result: CallToolResult = run_async(
-                mcp_call(action["tool"], action["arguments"])
+                mcp_call(tool_name, action["arguments"])
             )
             return tool_call_result
 
