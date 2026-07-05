@@ -49,6 +49,26 @@ These are actions that relate to your current state
 
 ---
 
+## DIRECTIVES
+
+Directives are rules for future iterations to follow. Use them to pass cross-iteration knowledge — for example, when you discover that certain methods don't work, or that a specific approach should be avoided, or when the next run needs to know something critical to complete the task. They can also be used as persistent memory across the entire session.
+
+Unlike `history` (which is a record of what happened), directives are **instructions to follow** on subsequent runs. They persist and accumulate across iterations, and are injected into future turns with the message *"Here are directives from previous models, follow them:"*.
+
+**Keep directives concise.** They are subject to the same token-limit trimming as history — only the most recent directives that fit within the limit are preserved.
+
+```json
+{"action": "directive", "directive": "string", "history": "string"}
+```
+
+| Field | Description |
+|---|---|
+| `action` | Must be `"directive"` |
+| `directive` | The instruction for future iterations. Be specific and actionable. |
+| `history` | Standard history line describing what prompted this directive. |
+
+---
+
 ## GENERAL CONSTRAINTS
 - **No coordinate/ID reuse:** Values from a previous turn are always stale. Re-read current state every turn.
 - **No duplicate actions:** If the exact same action has produced no change twice in a row, emit `stuck` or `retry` with a diagnostic.
