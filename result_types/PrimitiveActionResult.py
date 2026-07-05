@@ -7,3 +7,8 @@ class PrimitiveActionResult:
     action: dict
     command: Literal["PROCEED", "DONE", "STUCK", "REPLAN", "RETRY"] = "PROCEED"
     error_message: str = ""
+
+
+@dataclass
+class DirectiveActionResult:
+    directive: str

@@ -12,3 +12,4 @@ class ActionResult:
     hard_exit: bool | None = None
     temp_task: str | None = None
     raw_result: Any = None
+    directive: str | None = None

@@ -15,7 +15,10 @@ from interactions.mcps.mcp_registry import mcp_registry
 from interactions.mcps.mcp_loop import run_async
 
 from mcp.types import CallToolResult, TextContent
-from result_types.PrimitiveActionResult import PrimitiveActionResult
+from result_types.PrimitiveActionResult import (
+    PrimitiveActionResult,
+    DirectiveActionResult,
+)
 from interactions.skills.types import KodoSkillResult
 
 from interactions.direct_app_control.direct_app_control_handler import (
@@ -35,6 +38,7 @@ def parse_action(
     | DirectAppProcessList
     | DirectAppControlListResult
     | DirectAppInteractionResult
+    | DirectiveActionResult
 ):
     return_command = "PROCEED"
     error_message = ""
@@ -182,6 +186,9 @@ def parse_action(
 
         case "replan":
             return_command = "REPLAN"
+
+        case "directive":
+            return DirectiveActionResult(directive=action.get("directive", ""))
 
         case _:
             logger.warning(f"Unknown action: {action['action']}")

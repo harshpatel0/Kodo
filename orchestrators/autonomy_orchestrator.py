@@ -11,29 +11,42 @@ from result_types import ActionResult
 from utils import estimate_tokens
 
 
+def truncate_data_list(item: list[str], max_tokens=400) -> list[str]:
+    if estimate_tokens("\n".join(item)) <= max_tokens:
+        return item
+
+    trimmed = []
+
+    for entry in reversed(item):
+        candidate = "\n".join([entry] + trimmed)
+        if estimate_tokens(candidate) > max_tokens:
+            break
+        trimmed.insert(0, entry)
+    return trimmed
+
+
 class History:
     def __init__(self) -> None:
         self.history: list[str] = []
 
-    def truncate_history(self, max_tokens=400) -> list[str]:
-        if estimate_tokens("\n".join(self.history)) <= max_tokens:
-            return self.history
-
-        trimmed = []
-
-        for entry in reversed(self.history):
-            candidate = "\n".join([entry] + trimmed)
-            if estimate_tokens(candidate) > max_tokens:
-                break
-            trimmed.insert(0, entry)
-        return trimmed
-
     def __str__(self) -> str:
-        history_list = self.truncate_history()
+        history_list = truncate_data_list(self.history)
         return "\n".join(history_list)
 
     def append(self, text: str) -> None:
         self.history.append(text)
+
+
+class Directive:
+    def __init__(self) -> None:
+        self.directive: list[str] = []
+
+    def __str__(self) -> str:
+        directive_list = truncate_data_list(self.directive)
+        return "\n".join(directive_list)
+
+    def append(self, text: str) -> None:
+        self.directive.append(text)
 
 
 class AutonomyOrchestrator:
@@ -49,6 +62,7 @@ class AutonomyOrchestrator:
 
         self.punishment_tally = ""
         self.history = History()
+        self.directive = Directive()
         self.runtime_skills = None
         self.last_action = None
 
@@ -71,6 +85,8 @@ class AutonomyOrchestrator:
             self.hard_exit = ar.hard_exit
         if ar.temp_task is not None:
             self.temp_task = ar.temp_task
+        if ar.directive:
+            self.directive.append(ar.directive)
 
     def _cleanup(self) -> None:
         self.temp_task = None
@@ -114,6 +130,10 @@ class AutonomyOrchestrator:
             self.installed_skills = [installed_skills]
 
     def run(self):
+        directive_section = (
+            f"\n## Directive\n{self.directive}\n" if str(self.directive).strip() else ""
+        )
+
         while not self.hard_exit:
             max_iter = settings.orchestrator.autonomy_orchestrator.max_total_iterations
 
@@ -122,11 +142,11 @@ Running iteration {self.iterations+1} out of {max_iter}
 
 Task = {self.task}
 
+Directives
+{directive_section}
+
 Additional Context:
 {self.additional_context}
-
-Skills:
-{self.skills}
 
 History (truncated):
 {str(self.history)}
@@ -153,8 +173,9 @@ History (truncated):
                     skills=self.skills,
                     runtime_skills=self.runtime_skills,
                     punishment_tally=punishment_tally,
-                    history=self.history,
+                    history=str(self.history),
                     available_skill_actions=self.skill_orchestrator.list_actions(),
+                    directive=str(self.directive),
                 )
             except KeyboardInterrupt:
                 exit(1)

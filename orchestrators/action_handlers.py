@@ -10,7 +10,7 @@ MAX_ITERATIONS_PER_STEP = (
 )
 MAX_REPLAN_LOOP = settings.orchestrator.planner_architecture.max_replan_loop
 
-from result_types import PrimitiveActionResult, ActionResult
+from result_types import PrimitiveActionResult, ActionResult, DirectiveActionResult
 from interactions.direct_app_control.types import *
 
 from interactions.skills.types import KodoSkillResult
@@ -227,6 +227,10 @@ Has any error occurred? {action_result.isError}
     return ActionResult(signal="CONTINUE", additional_context=new_context)
 
 
+def handle_directive_result(directive: str) -> ActionResult:
+    return ActionResult(signal="CONTINUE", directive=directive)
+
+
 def call_action(
     action: dict,
     step_count: int = 0,
@@ -279,8 +283,6 @@ def call_action(
 
         action_result = ActionResult(
             signal="CONTINUE",
-            step_count=step_count + 1 if not in_autonomy else None,
-            iterations=iterations + 1 if in_autonomy else None,
             additional_context=context,
         )
 
@@ -289,8 +291,6 @@ def call_action(
 
         action_result = ActionResult(
             signal="CONTINUE",
-            step_count=step_count + 1 if not in_autonomy else None,
-            iterations=iterations + 1 if in_autonomy else None,
             additional_context=f"Processes Found: {process_list_string}",
         )
 
@@ -304,18 +304,17 @@ def call_action(
 
         action_result = ActionResult(
             signal="CONTINUE",
-            step_count=step_count + 1 if not in_autonomy else None,
-            iterations=iterations + 1 if in_autonomy else None,
             additional_context=context,
         )
 
     elif isinstance(parsed_action, DirectAppInteractionResult):
         action_result = ActionResult(
             signal="CONTINUE",
-            step_count=step_count + 1 if not in_autonomy else None,
-            iterations=iterations + 1 if in_autonomy else None,
             additional_context=f"Direct App Interaction: Success? {parsed_action.success}, Message: {parsed_action.message}",
         )
+
+    elif isinstance(parsed_action, DirectiveActionResult):
+        action_result = handle_directive_result(parsed_action.directive)
 
     else:
         logger.warning("Unexpected result path in call_action")

@@ -42,6 +42,7 @@ def do_step(
     skills=None,
     runtime_skills=None,
     available_skill_actions=None,
+    directive=None,
 ):
 
     cfg = (
@@ -89,6 +90,13 @@ def do_step(
             user_prompt,
             additional_context=history,
             accompanying_message="Here is a running history of everything you said you did:",
+        )
+
+    if directive:
+        user_prompt = actor_model.return_prompt_with_additional_context(
+            user_prompt=user_prompt,
+            additional_context=directive,
+            accompanying_message="Here are directives from previous models, follow them:",
         )
 
     if (
