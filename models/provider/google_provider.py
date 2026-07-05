@@ -1,6 +1,7 @@
 import os
 import base64
 import time
+import hashlib
 
 from .base import ModelProvider, ChatMessage, ChatResponse
 from utils.logger import logger
@@ -28,7 +29,12 @@ class GoogleProvider(ModelProvider):
     Reads API key from environment variable at init time.
     """
 
-    def __init__(self, api_key_env_var: str = "GOOGLE_API_KEY"):
+    def __init__(
+        self,
+        api_key_env_var: str = "GOOGLE_API_KEY",
+        use_caching: bool = False,
+        cache_ttl_seconds: int = 300,
+    ):
         try:
             from google import genai
         except ImportError:
@@ -45,6 +51,23 @@ class GoogleProvider(ModelProvider):
 
         self._client = genai.Client(api_key=api_key)
         self._genai = genai
+        self.use_caching = use_caching
+        self._cache_ttl = cache_ttl_seconds
+        self._cached_contents: dict[str, tuple[str, float]] = {}
+
+        if self.use_caching:
+            self._clear_existing_caches()
+
+    def _clear_existing_caches(self):
+        try:
+            for cached in self._client.caches.list():
+                try:
+                    self._client.caches.delete(name=cached.name)
+                    logger.debug(f"Deleted stale cached content: {cached.name}")
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.debug(f"No existing caches to clear: {e}")
 
     def chat(
         self,
@@ -85,7 +108,45 @@ class GoogleProvider(ModelProvider):
         config_kwargs = {"temperature": temperature}
         if max_tokens:
             config_kwargs["max_output_tokens"] = max_tokens
-        if system_prompt:
+
+        cached_name = None
+        if self.use_caching and system_prompt:
+            cache_key = hashlib.sha256(
+                (model + "||" + system_prompt).encode()
+            ).hexdigest()
+            now = time.time()
+            entry = self._cached_contents.get(cache_key)
+            if entry is not None and entry[1] > now:
+                cached_name = entry[0]
+            else:
+                try:
+                    from google.genai import types as _gtypes
+
+                    cache_contents = history[:1] if history else []
+                    cached_obj = self._client.caches.create(
+                        model=model,
+                        config=_gtypes.CreateCachedContentConfig(
+                            system_instruction=system_prompt,
+                            contents=cache_contents,
+                            ttl=f"{self._cache_ttl}s",
+                            display_name=f"sysprompt_{cache_key[:12]}",
+                        ),
+                    )
+                    cached_name = cached_obj.name
+                    self._cached_contents[cache_key] = (
+                        cached_name,
+                        now + self._cache_ttl,
+                    )
+                    if cache_contents:
+                        history[:] = history[1:]
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to create Google cached content, falling back to normal request: {e}"
+                    )
+
+        if cached_name:
+            config_kwargs["cached_content"] = cached_name
+        elif system_prompt:
             config_kwargs["system_instruction"] = system_prompt
 
         if kwargs.get("thinking", False):

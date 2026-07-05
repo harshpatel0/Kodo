@@ -14,7 +14,10 @@ class AnthropicProvider(ModelProvider):
     """
 
     def __init__(
-        self, api_key_env_var: str = "ANTHROPIC_API_KEY", base_url: str | None = None
+        self,
+        api_key_env_var: str = "ANTHROPIC_API_KEY",
+        base_url: str | None = None,
+        use_caching: bool = False,
     ):
         try:
             import anthropic as _anthropic
@@ -33,6 +36,7 @@ class AnthropicProvider(ModelProvider):
         if base_url:
             kwargs["base_url"] = base_url
         self._client = _anthropic.Anthropic(**kwargs)
+        self.use_caching = use_caching
 
     def chat(
         self,
@@ -78,7 +82,16 @@ class AnthropicProvider(ModelProvider):
         }
 
         if system_prompt:
-            call_kwargs["system"] = system_prompt
+            if self.use_caching:
+                call_kwargs["system"] = [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+            else:
+                call_kwargs["system"] = system_prompt
         if kwargs.get("thinking", False):
             call_kwargs["thinking"] = {"type": "adaptive"}
             call_kwargs["temperature"] = (
