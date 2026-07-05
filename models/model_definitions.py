@@ -215,6 +215,10 @@ Treat skill actions as first-class actions alongside the standard ones above.
 OS: {context_provider.WINDOWS_VERSION}
 Screen: {context_provider.screen_width}x{context_provider.screen_height}
 
+# Registered MCP Servers
+The following MCP tools are available this session. When you use an MCP tool, all interaction with that tool's domain (e.g. the browser it opened, the service it connects to) MUST use MCP only — do not mix in DAC, pc_actions, or skills. MCP is a self-contained external protocol.
+
+{mcp_registry.get_tool_schemas()}
     """
             self.system_prompt = system_prompt
 
@@ -238,9 +242,6 @@ ControlType, name, x, y
 TASKBAR (located at the bottom of the screen, y ≈ {context_provider.screen_height - 20}): 
 Taskbar Elements
 {context_provider.get_taskbar_elements()}
-
-# Registered MCP Servers
-{mcp_registry.get_tool_schemas()}
 """
         return user_prompt
 
