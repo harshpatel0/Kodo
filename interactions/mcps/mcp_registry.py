@@ -28,15 +28,26 @@ class MCPRegistry:
 
         return tool_exists
 
-    def get_tool_schemas(self) -> list[dict]:
-        return [
-            {
-                "name": name,
-                "description": tool.description,
-                "input_schema": tool.inputSchema,
-            }
-            for name, (_, tool) in self._tools.items()
-        ]
+    def get_tool_schemas(self) -> str:
+        if not self._tools:
+            return ""
+        lines = []
+        for tool_name, (server_name, tool) in self._tools.items():
+            lines.append(f"### [{server_name}] {tool_name}")
+            if tool.description:
+                lines.append(f"Description: {tool.description}")
+            if tool.inputSchema:
+                props = tool.inputSchema.get("properties", {})
+                required = tool.inputSchema.get("required", [])
+                if props:
+                    lines.append("Arguments:")
+                    for arg_name, arg_schema in props.items():
+                        req = " (required)" if arg_name in required else ""
+                        arg_type = arg_schema.get("type", "any")
+                        arg_desc = arg_schema.get("description", "")
+                        lines.append(f"  - {arg_name} ({arg_type}){req}: {arg_desc}")
+            lines.append("")
+        return "\n".join(lines).strip()
 
 
 mcp_registry = MCPRegistry()
