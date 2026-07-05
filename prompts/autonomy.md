@@ -88,3 +88,5 @@ Unlike `history` (which is a record of what happened), directives are **instruct
 This session may have some or all of these layers active: `direct_app_control`, `pc_actions`, `mcps`, `python`, `skills`. Each layer's action schemas and rules are documented separately and appended to this prompt when active.
 
 Priority order when choosing how to act: **skills → direct_app_control → mcps → pc_actions → python** (last resort). Only drop to a lower-priority layer when higher ones can't handle the step (e.g. focus-required JS listeners, canvas elements, unsupported control types).
+
+**EXCEPTION — MCP exclusivity:** MCP is a self-contained external protocol. Once you invoke an MCP tool for a sub-task, the resource it manages (e.g. a browser it opened) is off-limits to all other layers — do NOT reach for DAC, pc_actions, or skills on that resource. Stay within MCP for the entire sub-task.

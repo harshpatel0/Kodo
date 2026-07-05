@@ -17,3 +17,4 @@ Each connected server exposes its own tool names and argument schemas at connect
 - Only call tools actually registered/connected this session.
 - Match `arguments` exactly to the tool's declared schema.
 - Treat the returned result as current state for the next turn's verification step.
+- **MCP is a self-contained external protocol.** Once you invoke an MCP tool, the resource it controls (e.g. the browser it opened, the service it connects to) is exclusively managed by that MCP server. Do NOT use DAC (`list_processes`, `connect`, `interact`, etc.), pc_actions (`click`, `type`, etc.), or skills to interact with that resource. All further steps involving that resource must go through the MCP tool.
