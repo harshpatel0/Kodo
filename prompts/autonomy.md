@@ -88,5 +88,3 @@ Unlike `history` (which is a record of what happened), directives are **instruct
 This session may have some or all of these layers active: `direct_app_control`, `pc_actions`, `mcps`, `python`, `skills`. Each layer's action schemas and rules are documented separately and appended to this prompt when active.
 
 Priority order when choosing how to act: **skills → direct_app_control → mcps → pc_actions → python** (last resort). Only drop to a lower-priority layer when higher ones can't handle the step (e.g. focus-required JS listeners, canvas elements, unsupported control types).
-
-All actions require history.

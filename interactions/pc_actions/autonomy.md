@@ -35,6 +35,5 @@ Universal fallback input — works on any app, including ones incompatible with 
 ```json
 {"action": "click", "x": 120, "y": 1050, "button": "left", "element": "Chrome", "history": "Clicked Chrome taskbar icon; browser now opening"}
 {"action": "submit", "text": "Python tutorial", "x": 300, "y": 80, "history": "Submitted search query into focused search box"}
-{"action": "press_hotkey", "keys": ["alt", "tab"], "history": "Active window changed unexpectedly; cycling back to target application"}
-{"action": "press_hotkey", "keys": ["alt", "tab"], "history": "Click at (825,928) activated VSCode instead of target; recovering focus"}
+{"action": "press_hotkey", "keys": ["alt", "tab"], "history": "Focus stolen by another window; cycling back to target application"}
 ```

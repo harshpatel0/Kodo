@@ -27,7 +27,7 @@ If the task or user tells you an app is already running (e.g. "Edge is already o
 {"action": "list_processes", "history": "string"}
 {"action": "connect", "process_id": int, "history": "string"}
 {"action": "list_controls", "history": "string"}
-{"action": "interact", "control_id": "string", "value": "string (optional, for setting ComboBox values directly)", "history": "string"}
+{"action": "interact", "control_id": "string", "value": "string (optional, for value-supporting controls like Edit, or ComboBox fallback)", "history": "string"}
 {"action": "expand", "control_id": "string", "history": "string"}
 {"action": "collapse", "control_id": "string", "history": "string"}
 {"action": "set_value", "control_id": "string", "value": "string", "history": "string"}
@@ -71,7 +71,7 @@ You can re-`connect` to switch apps. No explicit disconnect needed.
 ```json
 {"action": "list_processes", "history": "Listing available windows"}
 {"action": "connect", "process_id": 1234, "history": "Connected to notepad.exe"}
-{"action": "list_controls", "control_id": "", "history": "Listing all controls in the connected window"}
+{"action": "list_controls", "history": "Listing all controls in the connected window"}
 {"action": "interact", "control_id": "12-345678-9", "history": "Clicked Edit button"}
 {"action": "set_value", "control_id": "12-345678-9", "value": "hello world", "history": "Typed into edit field"}
 {"action": "scroll", "control_id": "12-345678-9", "direction": "down", "amount": "line", "history": "Scrolled down one line"}
