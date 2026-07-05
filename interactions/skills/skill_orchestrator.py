@@ -14,7 +14,7 @@ VENV_PYTHON = os.path.join(
 )
 
 from interactions.python.run_python_code import PythonRunner
-from result_types.KodoSkillResult import KodoSkillResult
+from interactions.skills.types import KodoSkillResult
 from utils.logger import logger
 
 

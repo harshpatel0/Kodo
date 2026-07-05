@@ -16,7 +16,7 @@ from interactions.mcps.mcp_loop import run_async
 
 from mcp.types import CallToolResult, TextContent
 from result_types.PrimitiveActionResult import PrimitiveActionResult
-from result_types.KodoSkillResult import KodoSkillResult
+from interactions.skills.types import KodoSkillResult
 
 from interactions.direct_app_control.direct_app_control_handler import (
     direct_app_handler,
