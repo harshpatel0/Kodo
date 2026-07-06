@@ -4,19 +4,21 @@ root = rootutils.setup_root(__file__, pythonpath=True)
 
 import json
 from models.model_definitions import PlannerModel, SkillInstallationMode
-from skills.skill_orchestrator import skill_orchestrator
+from interactions.skills.skill_orchestrator import skill_orchestrator
 import utils.utils as utils
 from utils.logger import logger
 
 from settings.settings import settings
 
 from server.log_stream import web_emitter
+from utils.runtime_globals import CURRENT_MODE
 
 planner_model = PlannerModel()
 skill_installation = SkillInstallationMode()
 
 
 def make_plan(task: str):
+    CURRENT_MODE = "PLANNER"
     planner_skills, actor_skills = skill_installation.run(task)
 
     logger.debug(f"Planner skills loaded: {planner_skills is not None}")

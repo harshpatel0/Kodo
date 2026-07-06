@@ -4,18 +4,19 @@ root = rootutils.setup_root(__file__, pythonpath=True)
 
 from context_provider import ContextProvider
 from context_provider import UITreeHandler
-from skills.skill_orchestrator import skill_orchestrator
+from interactions.skills.skill_orchestrator import skill_orchestrator
 from models.provider import get_provider, ChatMessage, ChatResponse
 
 from server.log_stream import web_emitter
 
 import utils.utils as utils
-import utils.strings as Strings
 from utils.logger import logger
+
+import prompts
 
 from settings.settings import settings
 
-from mcps.mcp_registry import mcp_registry
+from interactions.mcps.mcp_registry import mcp_registry
 
 context_provider = ContextProvider()
 ui_tree_handler = UITreeHandler()
@@ -32,8 +33,8 @@ def _get_actor_config():
 
 def _get_actor_system_prompt():
     if USING_AUTONOMY_MODE:
-        return Strings.AUTONOMY_MODE_SYSTEM_PROMPT
-    return Strings.ACTOR_BASE_SYSTEM_PROMPT
+        return prompts.AUTONOMY_MODE_SYSTEM_PROMPT
+    return prompts.ACTOR_SYSTEM_PROMPT
 
 
 def estimate_tokens(text: str) -> int:
@@ -55,7 +56,7 @@ class SkillInstallationMode:
         return skill_orchestrator.loaded_skills
 
     def run(self, task):
-        system_prompt = Strings.SKILL_INSTALLATION_PROMPT
+        system_prompt = prompts.SKILL_INSTALLATION_PROMPT
         system_prompt = (
             system_prompt
             + "\nHere are the available skills: "
@@ -77,7 +78,7 @@ class SkillInstallationMode:
 
         cfg = settings.models.skill_installation
         provider = get_provider(cfg)
-        response = provider.chat(
+        response: ChatResponse = provider.chat(
             messages=messages,
             model=cfg.model_name,
             temperature=cfg.temperature,
@@ -86,7 +87,8 @@ class SkillInstallationMode:
             thinking=getattr(cfg, "thinking", False),
         )
 
-        web_emitter.thinking(response.thinking)
+        web_emitter.thinking(response.thinking or "")
+        logger.debug(f"Skill installation thinking:\n{response.thinking}")
 
         raw_content = response.content if response else ""
         skills_data, _ = (
@@ -120,19 +122,25 @@ class SkillInstallationMode:
 
 
 class PlannerModel:
-    system_prompt = Strings.PLANNER_BASE_SYSTEM_PROMPT
+    system_prompt = prompts.PLANNER_SYSTEM_PROMPT
 
     def __init__(self):
-        self.base_system_prompt = Strings.PLANNER_BASE_SYSTEM_PROMPT
+        self.base_system_prompt = prompts.PLANNER_SYSTEM_PROMPT
 
     def run(self, task, skills=None):
         user_prompt = f"""
 # PC Environment
+OS: {context_provider.WINDOWS_VERSION}
+Screen: {context_provider.screen_width}x{context_provider.screen_height}
 Active Window: "{context_provider.get_active_window()}"
 
 Current Taskbar Setup Accessibility Tree
 {context_provider.get_taskbar_elements()}
 
+User Task: {task}
+
+# Registered MCP Servers
+{mcp_registry.get_tool_schemas()}
 """
         system_prompt = ""
 
@@ -141,19 +149,6 @@ Current Taskbar Setup Accessibility Tree
             and settings.models.planner.model_name.startswith("gemma")
         ):
             system_prompt = system_prompt + "<|think|>"
-
-        # Populate context that stays constant
-
-        system_prompt = system_prompt + f"""
-# PC Environment
-OS: {context_provider.WINDOWS_VERSION}
-Screen: {context_provider.screen_width}x{context_provider.screen_height}
-
-User Task: {task}
-
-# Registered MCP Servers
-{mcp_registry.get_tool_schemas()}
-"""
 
         system_prompt = system_prompt + self.base_system_prompt
 
@@ -203,7 +198,7 @@ Treat skill actions as first-class actions alongside the standard ones above.
 {skills}
 """
 
-    def construct_system_prompt(self, task=None, skills=None):
+    def construct_system_prompt(self, skills=None):
         if self.system_prompt == "":
             system_prompt = ""
 
@@ -220,25 +215,21 @@ Treat skill actions as first-class actions alongside the standard ones above.
 OS: {context_provider.WINDOWS_VERSION}
 Screen: {context_provider.screen_width}x{context_provider.screen_height}
 
+# Registered MCP Servers
+The following MCP tools are available this session. When you use an MCP tool, all interaction with that tool's domain (e.g. the browser it opened, the service it connects to) MUST use MCP only — do not mix in DAC, pc_actions, or skills. MCP is a self-contained external protocol.
+
+{mcp_registry.get_tool_schemas()}
     """
-            if USING_AUTONOMY_MODE:
-                if not task:
-                    raise ValueError(
-                        "Constructing a system prompt in autonomy mode requires the task"
-                    )
-                system_prompt = system_prompt + f"""
-Task: {task}
-"""
             self.system_prompt = system_prompt
 
         return self.system_prompt
 
-    def construct_user_prompt(self, task, instruction, expected_result):
+    def construct_user_prompt(self, task, instruction=None, expected_result=None):
+        instruction_line = f"\nInstructions: {instruction}" if instruction else ""
+        expected_line = f"\nExpected Result: {expected_result}" if expected_result else ""
         user_prompt = f"""
 # Step Context
-Current Task: {task}
-{'Instructions: ' + instruction if instruction else ''}
-{'Expected Result ' + expected_result if expected_result else ''}
+Current Task: {task}{instruction_line}{expected_line}
 
 # App Context
 Active Window: {context_provider.get_active_window()}
@@ -251,11 +242,6 @@ ControlType, name, x, y
 TASKBAR (located at the bottom of the screen, y ≈ {context_provider.screen_height - 20}): 
 Taskbar Elements
 {context_provider.get_taskbar_elements()}
-
-# Registered MCP Servers
-{mcp_registry.get_tool_schemas()}
-
-# Additional Context is provided below (if the orchestrator has anything to say)
 """
         return user_prompt
 
@@ -263,7 +249,7 @@ Taskbar Elements
         self,
         user_prompt,
         additional_context,
-        accompanying_message="A previous run of this step resulted in a `STUCK` or `RETRY` handoff, the agent gave instructions to you on how to recover, execute accordingly: ",
+        accompanying_message="Additional context from the previous step:",
     ):
         user_prompt = user_prompt + f"\n{accompanying_message}\n{additional_context}"
         return user_prompt

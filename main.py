@@ -8,6 +8,8 @@ from pathlib import Path
 import sys
 import bootstrapper
 
+from utils import check_layer
+
 
 from utils.globals import API_BIND_TO_ALL_IPS, API_PORT
 
@@ -51,7 +53,10 @@ if __name__ == "__main__":
 
     _run_under_venv()
 
-    bootstrapper.setup_mcps()
+    bootstrapper.check_layers()
+
+    if check_layer("mcps"):
+        bootstrapper.setup_mcps()
 
     if "-t" in sys.argv:
         arguments = sys.argv.copy()

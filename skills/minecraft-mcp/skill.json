@@ -1,0 +1,6 @@
+{
+  "name": "minecraft-mcp",
+  "description": "Actor guide for Minecraft bot control via the minecraft MCP server.",
+  "accompanies_mcp": "minecraft",
+  "has_actor_skill": true
+}

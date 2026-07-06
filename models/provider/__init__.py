@@ -71,6 +71,7 @@ def _create_anthropic_provider() -> AnthropicProvider:
     return AnthropicProvider(
         api_key_env_var=getattr(cfg, "api_key_env_var", "ANTHROPIC_API_KEY"),
         base_url=getattr(cfg, "base_url", None),
+        use_caching=getattr(cfg, "use_caching", False),
     )
 
 
@@ -78,4 +79,6 @@ def _create_google_provider() -> GoogleProvider:
     cfg = settings.model_providers.google
     return GoogleProvider(
         api_key_env_var=getattr(cfg, "api_key_env_var", "GOOGLE_API_KEY"),
+        use_caching=getattr(cfg, "use_caching", False),
+        cache_ttl_seconds=getattr(cfg, "cache_ttl_seconds", 300),
     )

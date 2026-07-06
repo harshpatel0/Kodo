@@ -7,7 +7,7 @@ import venv
 import json
 
 from utils.globals import PYTHON_RUNNER_VENV_NAME
-from result_types.KodoSkillResult import KodoSkillResult
+from interactions.skills.types import KodoSkillResult
 
 VENV_DIR = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), PYTHON_RUNNER_VENV_NAME

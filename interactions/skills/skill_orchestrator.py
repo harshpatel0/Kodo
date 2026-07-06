@@ -6,15 +6,15 @@ root = rootutils.setup_root(__file__, pythonpath=True)
 
 from utils.globals import PYTHON_RUNNER_VENV_NAME
 
-SKILLS_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SKILLS_DIR)
+SKILLS_DIR = os.path.join(root, "skills")
+PROJECT_ROOT = root
 
 VENV_PYTHON = os.path.join(
     PROJECT_ROOT, PYTHON_RUNNER_VENV_NAME, "Scripts", "python.exe"
 )
 
-from python.run_python_code import PythonRunner
-from result_types.KodoSkillResult import KodoSkillResult
+from interactions.python.run_python_code import PythonRunner
+from interactions.skills.types import KodoSkillResult
 from utils.logger import logger
 
 
@@ -117,6 +117,7 @@ class Skills:
                 "executable": False,
                 "actions": [],
                 "description": None,
+                "accompanies_mcp": None,
                 "has_planner_skill": os.path.exists(
                     os.path.join(skill_path, "PLANNER_SKILL.md")
                 ),
@@ -160,7 +161,6 @@ class Skills:
                     elif entry:
                         skill_entry["executable"] = True
                         skill_entry["actions"] = definition.get("actions", [])
-                        skill_entry["description"] = definition.get("description")
                         skill_entry["entry"] = entry
                         skill_entry["dependencies"] = definition.get("dependencies", [])
 
@@ -169,6 +169,9 @@ class Skills:
                             logger.debug(
                                 f"Registered action '{action}' to {skill_folder}"
                             )
+
+                    skill_entry["description"] = definition.get("description")
+                    skill_entry["accompanies_mcp"] = definition.get("accompanies_mcp")
 
                 except Exception as e:
                     logger.error(f"Failed to load skill.json for '{skill_folder}': {e}")
@@ -192,6 +195,8 @@ class Skills:
                 status.append("actor guide")
             if skill["dynamic_context"]:
                 status.append("context dynamically generated")
+            if skill["accompanies_mcp"]:
+                status.append(f"accompanies MCP: {skill['accompanies_mcp']}")
             desc = f" — {skill['description']}" if skill["description"] else ""
             lines.append(f"- {skill['name']}{desc} [{', '.join(status)}]")
         return "\n".join(lines)

@@ -10,6 +10,10 @@ from utils.globals import (
 from server.log_stream import web_emitter
 from settings.settings import settings
 
+from interactions.direct_app_control.direct_app_control_handler import (
+    direct_app_handler,
+)
+
 actor_model = ActorModel()
 
 
@@ -38,6 +42,7 @@ def do_step(
     skills=None,
     runtime_skills=None,
     available_skill_actions=None,
+    directive=None,
 ):
 
     cfg = (
@@ -48,7 +53,7 @@ def do_step(
     model_provider = cfg.provider
     model_name = cfg.model_name
 
-    actor_model.construct_system_prompt(task=task, skills=skills)
+    actor_model.construct_system_prompt(skills=skills)
 
     user_prompt = actor_model.construct_user_prompt(
         task=task, instruction=None, expected_result=None
@@ -80,11 +85,28 @@ def do_step(
             accompanying_message="The following skill(s) was/were just installed and is now available to you:",
         )
 
+    if (
+        settings.direct_app_control.always_populate_connected_app_controls
+        and direct_app_handler.is_app_connected()
+    ):
+        user_prompt = actor_model.return_prompt_with_additional_context(
+            user_prompt=user_prompt,
+            additional_context=str(direct_app_handler.list_process_str()),
+            accompanying_message=f"Here are the controls of the connected app {direct_app_handler.return_app_window()} with PID {direct_app_handler.return_connected_pid}",
+        )
+
     if history:
         user_prompt = actor_model.return_prompt_with_additional_context(
             user_prompt,
             additional_context=history,
             accompanying_message="Here is a running history of everything you said you did:",
+        )
+
+    if directive:
+        user_prompt = actor_model.return_prompt_with_additional_context(
+            user_prompt=user_prompt,
+            additional_context=directive,
+            accompanying_message="Here are directives from previous models, follow them:",
         )
 
     chat_response = actor_model.run(user_prompt)

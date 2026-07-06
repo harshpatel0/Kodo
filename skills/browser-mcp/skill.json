@@ -1,6 +1,7 @@
 {
   "name": "browser-mcp",
-  "description": "Actor guide for browser control via the chrome-devtools MCP server. Install alongside the chrome-devtools MCP to provide the actor with usage patterns, sequencing rules, and tool selection guidance.",
+  "description": "Actor guide for browser control via the chrome-devtools MCP server. Accompanies the chrome-devtools MCP server with usage patterns, sequencing rules, and tool selection guidance.",
   "actions": [],
-  "entry": ""
+  "entry": "",
+  "accompanies_mcp": "chrome-devtools"
 }

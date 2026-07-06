@@ -2,38 +2,72 @@ import time
 import models.actor_model as actor_model
 from context_provider import ContextProvider
 from orchestrators.action_handlers import call_action
-from skills.skill_orchestrator import skill_orchestrator
+from interactions.skills.skill_orchestrator import skill_orchestrator
 from models.model_definitions import SkillInstallationMode
 from utils import logger
 from settings.settings import settings
-from result_types import ActionResult, KodoSkillResult
+from result_types import ActionResult
+from mcp.types import CallToolResult, TextContent
+from interactions.skills.types import KodoSkillResult
+
+from utils.runtime_globals import CURRENT_MODE
 
 from utils import estimate_tokens
+
+DAC_ACTIONS = {
+    "list_processes",
+    "connect",
+    "list_controls",
+    "interact",
+    "expand",
+    "collapse",
+    "set_value",
+    "scroll",
+    "set_range_value",
+    "get_grid_item",
+    "minimize_window",
+    "maximize_window",
+    "restore_window",
+    "close_window",
+}
+
+
+def truncate_data_list(item: list[str], max_tokens=400) -> list[str]:
+    if estimate_tokens("\n".join(item)) <= max_tokens:
+        return item
+
+    trimmed = []
+
+    for entry in reversed(item):
+        candidate = "\n".join([entry] + trimmed)
+        if estimate_tokens(candidate) > max_tokens:
+            break
+        trimmed.insert(0, entry)
+    return trimmed
 
 
 class History:
     def __init__(self) -> None:
         self.history: list[str] = []
 
-    def truncate_history(self, max_tokens=400) -> list[str]:
-        if estimate_tokens("\n".join(self.history)) <= max_tokens:
-            return self.history
-
-        trimmed = []
-
-        for entry in reversed(self.history):
-            candidate = "\n".join([entry] + trimmed)
-            if estimate_tokens(candidate) > max_tokens:
-                break
-            trimmed.insert(0, entry)
-        return trimmed
-
     def __str__(self) -> str:
-        history_list = self.truncate_history()
+        history_list = truncate_data_list(self.history)
         return "\n".join(history_list)
 
     def append(self, text: str) -> None:
         self.history.append(text)
+
+
+class Directive:
+    def __init__(self) -> None:
+        self.directive: list[str] = []
+
+    def __str__(self) -> str:
+        directive_list = truncate_data_list(self.directive)
+        return "\n".join(directive_list)
+
+    def append(self, text: str) -> None:
+        self.directive.append(text)
 
 
 class AutonomyOrchestrator:
@@ -49,6 +83,7 @@ class AutonomyOrchestrator:
 
         self.punishment_tally = ""
         self.history = History()
+        self.directive = Directive()
         self.runtime_skills = None
         self.last_action = None
 
@@ -57,6 +92,80 @@ class AutonomyOrchestrator:
         self.replan_history = []
         self.temp_task = None
         self.step_result: dict = {}
+
+    def _make_deterministic_history(
+        self, ar: ActionResult, step_result: dict
+    ) -> str | None:
+        action = step_result.get("action", "")
+        if not action:
+            return None
+
+        is_tool = False
+        is_dac_error = False
+
+        if action == "mcp_tool_call":
+            is_tool = True
+        elif action == "python":
+            is_tool = True
+        elif action in DAC_ACTIONS:
+            raw = ar.raw_result
+            if raw is not None:
+                error = getattr(raw, "error", None) or getattr(
+                    raw, "error_message", None
+                )
+                success = getattr(raw, "success", None)
+                if error or (success is not None and not success):
+                    is_dac_error = True
+        elif skill_orchestrator.can_handle(action):
+            is_tool = True
+
+        if not is_tool and not is_dac_error:
+            return None
+
+        intent = step_result.get("history", "")
+        summary = self._summarize_raw_result(ar.raw_result)
+        if not summary:
+            return intent
+        if len(intent) + len(summary) < 300:
+            return f"{intent} | {summary}"
+        return f"{intent} | {summary[:250]}..."
+
+    def _summarize_raw_result(self, raw) -> str | None:
+        if raw is None:
+            return None
+
+        if isinstance(raw, CallToolResult):
+            texts = [
+                b.text
+                for b in raw.content
+                if isinstance(b, TextContent) and b.text.strip()
+            ]
+            if not texts:
+                return None
+            combined = "; ".join(texts)
+            error_tag = " [ERROR]" if raw.isError else ""
+            if len(combined) <= 200:
+                return f"{combined}{error_tag}"
+            return f"{combined[:197]}{error_tag}..."
+
+        if isinstance(raw, KodoSkillResult):
+            parts = []
+            if raw.skill_output:
+                parts.append(raw.skill_output[:200])
+            if raw.result in ("ERROR", "TIMEOUT") and raw.skill_errors:
+                err = raw.skill_errors[:200]
+                parts.append(f"error: {err}")
+            return " | ".join(parts) if parts else None
+
+        error = getattr(raw, "error", None) or getattr(raw, "error_message", None)
+        if error:
+            return f"error: {str(error)[:200]}"
+
+        message = getattr(raw, "message", None)
+        if message:
+            return str(message)[:200]
+
+        return None
 
     def _apply(self, ar: ActionResult) -> None:
         if ar.step_count is not None:
@@ -71,6 +180,8 @@ class AutonomyOrchestrator:
             self.hard_exit = ar.hard_exit
         if ar.temp_task is not None:
             self.temp_task = ar.temp_task
+        if ar.directive:
+            self.directive.append(ar.directive)
 
     def _cleanup(self) -> None:
         self.temp_task = None
@@ -103,6 +214,7 @@ class AutonomyOrchestrator:
         )
 
     def run_skill_installation_mode(self):
+        CURRENT_MODE = "SKILL_INSTALLATION"
         actor_skills, installed_skills = self.skill_installation_mode.run(self.task)
 
         self.skills = actor_skills
@@ -114,6 +226,11 @@ class AutonomyOrchestrator:
             self.installed_skills = [installed_skills]
 
     def run(self):
+        CURRENT_MODE = "AUTONOMY"
+        directive_section = (
+            f"\n## Directive\n{self.directive}\n" if str(self.directive).strip() else ""
+        )
+
         while not self.hard_exit:
             max_iter = settings.orchestrator.autonomy_orchestrator.max_total_iterations
 
@@ -122,11 +239,11 @@ Running iteration {self.iterations+1} out of {max_iter}
 
 Task = {self.task}
 
+Directives
+{directive_section}
+
 Additional Context:
 {self.additional_context}
-
-Skills:
-{self.skills}
 
 History (truncated):
 {str(self.history)}
@@ -153,8 +270,9 @@ History (truncated):
                     skills=self.skills,
                     runtime_skills=self.runtime_skills,
                     punishment_tally=punishment_tally,
-                    history=self.history,
+                    history=str(self.history),
                     available_skill_actions=self.skill_orchestrator.list_actions(),
+                    directive=str(self.directive),
                 )
             except KeyboardInterrupt:
                 exit(1)
@@ -169,6 +287,7 @@ History (truncated):
 
             if self.step_result.get("install_skills"):
                 self._handle_skill_installation(self.step_result["skills"])
+                self.history.append(self.step_result.get("history", "None"))
 
             else:
                 ar = call_action(
@@ -181,7 +300,21 @@ History (truncated):
                 self._apply(ar)
                 time.sleep(settings.orchestrator.action_settle_time)
 
-            # Append to history
+                # Append to history
+                # Use actual tool result for deterministic tools, fall back to model's self-reported history for everything else
+                deterministic = self._make_deterministic_history(ar, self.step_result)
+                if deterministic:
+                    self.history.append(deterministic)
+                else:
+                    model_provided_history = self.step_result.get("history", "None")
+                    self.history.append(model_provided_history)
 
-            model_provided_history = self.step_result.get("history", "None")
-            self.history.append(model_provided_history)
+                if settings.orchestrator.autonomy_orchestrator.toast_notify_history:
+                    from winotify import Notification
+
+                    toast = Notification(
+                        app_id="Kodo",
+                        title="Kodo Step Result",
+                        msg=deterministic or self.step_result.get("history", "None"),
+                    )
+                    toast.show()

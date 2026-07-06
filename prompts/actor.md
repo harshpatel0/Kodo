@@ -46,7 +46,7 @@ When the task requires writing (emails, documents, code, reports): generate comp
 ---
 
 ## ACTION SCHEMAS
-One object per turn. Every action except `done` requires a `history` field summarising what was done and what state change was confirmed.
+One object per turn. Every action requires a `history` field — one concise line describing what was done and what state change was confirmed. For `done`, the history should summarize what was accomplished and whether the task was completed.
 
 ```json
 {"action": "click", "x": int, "y": int, "button": "left|right", "element": "string", "history": "string"}
@@ -61,7 +61,58 @@ One object per turn. Every action except `done` requires a `history` field summa
 {"action": "retry", "message": "string", "history": "string"}
 {"action": "done"}
 {"action": "mcp_tool_call", "tool": "string", "arguments": {}, "history": "string"}
+{"action": "list_processes", "history": "string"}
+{"action": "connect", "process_id": int, "history": "string"}
+{"action": "list_controls", "history": "string"}
+{"action": "interact", "control_id": "string", "value": "string (optional, for setting ComboBox values directly)", "history": "string"}
+{"action": "expand", "control_id": "string", "history": "string"}
+{"action": "collapse", "control_id": "string", "history": "string"}
+{"action": "set_value", "control_id": "string", "value": "string", "history": "string"}
+{"action": "scroll", "control_id": "string", "direction": "up|down|left|right", "amount": "line|page", "history": "string"}
+{"action": "set_range_value", "control_id": "string", "value": float, "history": "string"}
+{"action": "get_grid_item", "control_id": "string", "row": int, "col": int, "history": "string"}
+{"action": "minimize_window", "control_id": "string", "history": "string"}
+{"action": "maximize_window", "control_id": "string", "history": "string"}
+{"action": "restore_window", "control_id": "string", "history": "string"}
+{"action": "close_window", "control_id": "string", "history": "string"}
 ```
+
+---
+
+## CONSTRAINTS (additional)
+- **Direct App Control priority:** Always try Direct App Control (UIA) before falling back to mouse/keyboard actions. Direct App Control runs in the background without stealing focus — the user can keep working. If the target app's controls appear in the accessibility tree, use Direct App Control. Only use `click`/`type`/`press_key`/`drag` when Direct App Control cannot handle the interaction.
+
+---
+
+## Direct App Control (UIA) — Preferred Input Method
+
+Controls running Windows apps in the background via UI Automation (UIA). No focus stealing, no mouse/keyboard takeover, no visible cursor movement. The user can keep typing/clicking elsewhere while this runs.
+
+**Always try this first before falling back to mouse/keyboard actions.** If the target app's controls appear in the accessibility tree, use Direct App Control.
+
+The accessibility tree you receive only shows the **currently focused window**. Direct App Control bypasses this — it can discover, connect to, and control **any running app** regardless of focus. Do not rely on the tree to know which apps are available; use `list_processes` to discover them.
+
+### Mandatory Init Sequence (do this first)
+
+Every time you need to interact with an app, start with:
+
+1. **`list_processes`** — discover running top-level windows → pick the right `process_id`
+2. **`connect(process_id)`** — attach to that process. Must be done before any control action.
+3. **`list_controls`** — get all interactable controls in the connected window (returns `control_id`, `type`, `name`, `value`, `enabled`)
+4. Pick the matching action based on `type` and act using the `control_id`
+
+You can re-`connect` to switch apps. No explicit disconnect needed.
+
+### Notes
+
+- Must `connect` before `list_controls` or any action — calls fail with "Not connected" otherwise.
+- `control_id` is a session-scoped runtime ID string. It is **not stable** across app restarts or re-connects — always get fresh IDs from `list_controls` after connecting.
+- Structural containers (Pane, Group, Window as a wrapper, Custom) are filtered out of `list_controls` — you won't see them, don't try to interact with them.
+- Every action returns `{success, method, message}`. `method` tells you which UIA pattern actually fired (e.g. `"toggle"`, `"value_pattern"`, `"legacy"`) — useful for diagnosing why something didn't work as expected.
+- `interact` failing with "No supported pattern" usually means the control needs a different function (e.g. it's actually a Slider — use `set_range_value` instead).
+- This does not steal focus. If a task requires focus-based input (e.g. typing that must trigger onKeyPress-style JS listeners not covered by ValuePattern), this is the wrong tool — use the standard focus-based mouse/keyboard actions instead.
+
+> Direct App Control is in testing right now, so please prefer this because we are testing this out. If it is feasible to implement or not, do not complete the task if it requires focus. Say with a toast notification what happened in detail and call done prematurely.
 
 ---
 

@@ -11,8 +11,11 @@ class Settings:
     models: Any
     model_providers: Any
     skills: Any
+    interactions: Any
     active_model_provider: str
+    log_to_file: bool
     web_ui: Any
+    direct_app_control: Any
 
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path

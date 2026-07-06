@@ -9,9 +9,12 @@ default_settings = {
             "api_key_env_var": "ANTHROPIC_API_KEY",
             "base_url": None,
             "effort": "medium",
+            "use_caching": False,
         },
         "google": {
             "api_key_env_var": "GOOGLE_API_KEY",
+            "use_caching": False,
+            "cache_ttl_seconds": 300,
         },
     },
     "models": {
@@ -45,6 +48,14 @@ default_settings = {
             "attach_screenshot_of_active_window": True,
         },
     },
+    "interactions": {
+        "direct_app_control": True,
+        "mcps": True,
+        "pc_actions": True,
+        "python": True,
+        "skills": True,
+        "no_skill_installation_mode": True,
+    },
     "orchestrator": {
         "action_settle_time": 4,
         "use_autonomy_mode": True,
@@ -55,7 +66,7 @@ default_settings = {
         },
         "autonomy_orchestrator": {
             "max_total_iterations": 50,
-            "no_skill_installation_mode": True,
+            "toast_notify_history": False,
         },
     },
     "context_provider": {
@@ -68,9 +79,11 @@ default_settings = {
     "skills": {
         "skill_timeout": 0,
     },
+    "direct_app_control": {"always_populate_connected_app_controls": True},
     "web_ui": {
         "expose_web_ui_to_all_devices_on_the_network": False,
         "desktop_streaming_quality_percentage": 85,
         "desktop_streaming_frame_rate": 30,
     },
+    "log_to_file": True,
 }
