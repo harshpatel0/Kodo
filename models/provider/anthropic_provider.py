@@ -5,7 +5,18 @@ from utils.logger import logger
 import anthropic as _anthropic
 from settings.settings import settings
 
+from utils.runtime_globals import CURRENT_MODE
+
 import time
+
+
+def determine_caching(setting_state: bool):
+    """Disable Caching if the mode is not ACTOR or AUTONOMY as cache invalidation penalties will apply
+    if planner or skill_installation mode prompts are cached
+    """
+    if setting_state and (CURRENT_MODE != "ACTOR" or CURRENT_MODE != "AUTONOMY"):
+        return True
+    return False
 
 
 class AnthropicProvider(ModelProvider):
@@ -36,7 +47,7 @@ class AnthropicProvider(ModelProvider):
         if base_url:
             kwargs["base_url"] = base_url
         self._client = _anthropic.Anthropic(**kwargs)
-        self.use_caching = use_caching
+        self.use_caching = determine_caching(use_caching)
 
     def chat(
         self,

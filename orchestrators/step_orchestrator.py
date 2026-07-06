@@ -5,6 +5,7 @@ from orchestrators.action_handlers import call_action
 from utils.logger import logger
 from settings.settings import settings
 from result_types import ActionResult
+from utils.runtime_globals import CURRENT_MODE
 
 MAX_ITERATIONS_PER_STEP = (
     settings.orchestrator.planner_architecture.max_iterations_per_step
@@ -49,6 +50,7 @@ class StepOrchestrator:
             self.temp_task = ar.temp_task
 
     def run(self):
+        CURRENT_MODE = "ACTOR"
         while not self.hard_exit:
             self.in_autonomy = self.step_count >= len(self.steps)
 

@@ -10,6 +10,8 @@ from result_types import ActionResult
 from mcp.types import CallToolResult, TextContent
 from interactions.skills.types import KodoSkillResult
 
+from utils.runtime_globals import CURRENT_MODE
+
 from utils import estimate_tokens
 
 DAC_ACTIONS = {
@@ -212,6 +214,7 @@ class AutonomyOrchestrator:
         )
 
     def run_skill_installation_mode(self):
+        CURRENT_MODE = "SKILL_INSTALLATION"
         actor_skills, installed_skills = self.skill_installation_mode.run(self.task)
 
         self.skills = actor_skills
@@ -223,6 +226,7 @@ class AutonomyOrchestrator:
             self.installed_skills = [installed_skills]
 
     def run(self):
+        CURRENT_MODE = "AUTONOMY"
         directive_section = (
             f"\n## Directive\n{self.directive}\n" if str(self.directive).strip() else ""
         )

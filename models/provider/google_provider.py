@@ -6,6 +6,17 @@ import hashlib
 from .base import ModelProvider, ChatMessage, ChatResponse
 from utils.logger import logger
 
+from utils.runtime_globals import CURRENT_MODE
+
+
+def determine_caching(setting_state: bool):
+    """Disable Caching if the mode is not ACTOR or AUTONOMY as cache invalidation penalties will apply
+    if planner or skill_installation mode prompts are cached
+    """
+    if setting_state and (CURRENT_MODE != "ACTOR" or CURRENT_MODE != "AUTONOMY"):
+        return True
+    return False
+
 
 def _extract_status_code(err: Exception) -> int | None:
     for attr in ("code", "status_code", "grpc_status_code"):
@@ -51,7 +62,7 @@ class GoogleProvider(ModelProvider):
 
         self._client = genai.Client(api_key=api_key)
         self._genai = genai
-        self.use_caching = use_caching
+        self.use_caching = determine_caching(use_caching)
         self._cache_ttl = cache_ttl_seconds
         self._cached_contents: dict[str, tuple[str, float]] = {}
 
