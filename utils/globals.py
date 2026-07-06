@@ -73,6 +73,7 @@ import platform
 IS_RUNNING_WINDOWS = platform.system() == "Windows"
 
 AVAILABLE_INTERACTION_LAYERS: list[str] = [
+    "daemons",
     "direct_app_control",
     "mcps",
     "pc_actions",
