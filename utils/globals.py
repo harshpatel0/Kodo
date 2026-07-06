@@ -71,3 +71,11 @@ STRUCTURAL_TYPES = {"Pane", "Group", "Window", "Custom"}
 import platform
 
 IS_RUNNING_WINDOWS = platform.system() == "Windows"
+
+AVAILABLE_INTERACTION_LAYERS: list[str] = [
+    "direct_app_control",
+    "mcps",
+    "pc_actions",
+    "python",
+    "skills",
+]

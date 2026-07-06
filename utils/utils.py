@@ -47,11 +47,10 @@ def estimate_tokens(text) -> int:
 
 
 from settings.settings import settings
-from typing import Literal
 
 
 def check_layer(
-    layer: Literal["direct_app_control", "mcps", "pc_actions", "python", "skills"],
+    layer: str,
 ) -> bool:
     try:
         return getattr(settings.interactions, layer, True)

@@ -7,15 +7,7 @@ from typing import Literal, Tuple
 prompts_folder = Path(__file__).parent.parent / "prompts"
 interactions_folder = Path(__file__).parent.parent / "interactions"
 
-INTERACTION_LAYERS: Tuple[
-    Literal["direct_app_control", "mcps", "pc_actions", "python", "skills"], ...
-] = (
-    "direct_app_control",
-    "mcps",
-    "pc_actions",
-    "python",
-    "skills",
-)
+from utils.globals import AVAILABLE_INTERACTION_LAYERS
 
 
 def load_prompt(file: str, folder: Path = prompts_folder) -> str:
@@ -36,7 +28,7 @@ def construct_mode_prompt(mode: str) -> str:
 
     interaction_layer_prompts = ""
 
-    for interaction_layer in INTERACTION_LAYERS:
+    for interaction_layer in AVAILABLE_INTERACTION_LAYERS:
         if not check_layer(interaction_layer):
             continue
 

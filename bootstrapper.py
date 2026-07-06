@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import List, Literal
 
+from utils.globals import AVAILABLE_INTERACTION_LAYERS
+
 import mcp.shared.exceptions
 
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -41,17 +43,7 @@ def check_layers():
 
     enabled_layers = 0
 
-    interaction_layers: List[
-        Literal["direct_app_control", "mcps", "pc_actions", "python", "skills"]
-    ] = [
-        "direct_app_control",
-        "mcps",
-        "pc_actions",
-        "python",
-        "skills",
-    ]
-
-    for layer in interaction_layers:
+    for layer in AVAILABLE_INTERACTION_LAYERS:
         if check_layer(layer):
             enabled_layers += 1
 
