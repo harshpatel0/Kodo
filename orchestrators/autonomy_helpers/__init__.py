@@ -1,4 +1,4 @@
-import orchestrators.autonomy_helpers.autonomy_helpers
+from orchestrators.autonomy_helpers.autonomy_helpers import History, Directive
 
-history_manager = orchestrators.autonomy_helpers.autonomy_helpers.History()
-directive_manager = orchestrators.autonomy_helpers.autonomy_helpers.Directive()
+history_manager = History()
+directive_manager = Directive()
