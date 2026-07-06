@@ -265,13 +265,20 @@ History (truncated):
                 time.sleep(settings.orchestrator.action_settle_time)
 
                 # Append to history
-                # Use actual tool result for deterministic tools, fall back to model's self-reported history for everything else
-                deterministic = self._make_deterministic_history(ar, self.step_result)
-                if deterministic:
-                    self.history.append(deterministic)
+                if self.step_result.get("action") in (
+                    "create_daemon",
+                    "unregister_daemon",
+                ):
+                    pass
                 else:
-                    model_provided_history = self.step_result.get("history", "None")
-                    self.history.append(model_provided_history)
+                    deterministic = self._make_deterministic_history(
+                        ar, self.step_result
+                    )
+                    if deterministic:
+                        self.history.append(deterministic)
+                    else:
+                        model_provided_history = self.step_result.get("history", "None")
+                        self.history.append(model_provided_history)
 
                 if settings.orchestrator.autonomy_orchestrator.toast_notify_history:
                     from winotify import Notification
