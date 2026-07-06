@@ -136,14 +136,15 @@ Use the state below directly instead of re-querying.""",
         }
     )
 
+    logger.info(f"[LLM RAW] {response}")
+
     raw = utils.strip_markdown_json(response).strip()
 
     action, parse_error = utils.try_parse_json(raw)
 
     if not action:
         logger.warning(
-            f"[ACTOR MODEL] JSON parse failed: {parse_error}. "
-            f"Raw response: {raw[:200]}"
+            f"[JSON PARSE] Failed: {parse_error}. Raw: {raw[:500]}"
         )
         action = {
             "action": "retry",
