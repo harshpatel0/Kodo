@@ -1,6 +1,7 @@
 from mcp import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 from mcp.client.sse import sse_client
+from interactions.mcps.mcp_types import KodoCallToolResult
 
 
 class MCPClient:
@@ -36,7 +37,8 @@ class MCPClient:
         if self.session is None:
             raise RuntimeError("Session not initialized. Call connect() first.")
 
-        return await self.session.call_tool(name, arguments)
+        result = await self.session.call_tool(name, arguments)
+        return KodoCallToolResult(**result.model_dump())
 
     async def disconnect(self):
         if self.session is None:

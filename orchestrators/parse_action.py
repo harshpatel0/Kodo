@@ -14,7 +14,8 @@ pyrun = interactions.python.run_python_code.PythonRunner()
 from interactions.mcps.mcp_registry import mcp_registry
 from interactions.mcps.mcp_loop import run_async
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import TextContent
+from interactions.mcps.mcp_types import KodoCallToolResult
 from result_types.PrimitiveActionResult import (
     PrimitiveActionResult,
     DirectiveActionResult,
@@ -32,7 +33,7 @@ def parse_action(
     action: dict,
 ) -> (
     PrimitiveActionResult
-    | CallToolResult
+    | KodoCallToolResult
     | KodoSkillResult
     | DirectAppConnectionResult
     | DirectAppProcessList
@@ -75,10 +76,14 @@ def parse_action(
                 mcp_registry, "call_tool", None
             )
 
-            tool_name = action["tool"].split(":", 1)[-1] if ":" in action["tool"] else action["tool"]
+            tool_name = (
+                action["tool"].split(":", 1)[-1]
+                if ":" in action["tool"]
+                else action["tool"]
+            )
 
             if not mcp_registry.check_tool(tool_name):
-                return CallToolResult(
+                return KodoCallToolResult(
                     content=[
                         TextContent(
                             type="text",
@@ -92,7 +97,7 @@ def parse_action(
                 raise AttributeError(
                     "mcps.mcp_registry has no callable 'call' or 'call_tool'"
                 )
-            tool_call_result: CallToolResult = run_async(
+            tool_call_result: KodoCallToolResult = run_async(
                 mcp_call(tool_name, action["arguments"])
             )
             return tool_call_result
