@@ -14,6 +14,8 @@ from interactions.direct_app_control.direct_app_control_handler import (
     direct_app_handler,
 )
 
+from interactions.daemons.daemons import daemon_provider
+
 actor_model = ActorModel()
 
 
@@ -95,6 +97,16 @@ def do_step(
             accompanying_message=f"Here are the controls of the connected app {direct_app_handler.return_app_window()} with PID {direct_app_handler.return_connected_pid}",
         )
 
+    if str(daemon_provider):
+        user_prompt = actor_model.return_prompt_with_additional_context(
+            user_prompt=user_prompt,
+            additional_context=str(daemon_provider),
+            accompanying_message="""# Continuous Watchers (Daemons)
+This is the CURRENT STATE from your persistent watchers — injected every turn automatically.
+You do NOT need to manually call these tools as mcp_tool_call actions — the daemon already watches them.
+Use the state below directly instead of re-querying.""",
+        )
+        
     if history:
         user_prompt = actor_model.return_prompt_with_additional_context(
             user_prompt,
@@ -108,6 +120,7 @@ def do_step(
             additional_context=directive,
             accompanying_message="Here are directives from previous models, follow them:",
         )
+
 
     chat_response = actor_model.run(user_prompt)
     response = chat_response.content

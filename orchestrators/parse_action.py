@@ -25,6 +25,7 @@ from interactions.skills.types import KodoSkillResult
 from interactions.direct_app_control.direct_app_control_handler import (
     direct_app_handler,
 )
+from interactions.daemons.daemons import daemon_provider
 
 from interactions.direct_app_control.types import *
 
@@ -196,6 +197,14 @@ def parse_action(
 
         case "directive":
             return DirectiveActionResult(directive=action.get("directive", ""))
+
+        case "create_daemon" if check_layer("daemons"):
+            daemon_provider.register_daemon(action["daemon_action"])
+            return PrimitiveActionResult(action=action, command="PROCEED")
+
+        case "unregister_daemon" if check_layer("daemons"):
+            daemon_provider.unregister_daemon(action["index"])
+            return PrimitiveActionResult(action=action, command="PROCEED")
 
         case _:
             logger.warning(f"Unknown action: {action['action']}")
