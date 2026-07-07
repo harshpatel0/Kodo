@@ -35,7 +35,10 @@ class DirectAppControlHandler:
         return False
 
     def list_process_str(self) -> str:
-        return str(self.direct_app_controller.list_controls())
+        result = self.direct_app_controller.list_controls_diff()
+        if isinstance(result, str):
+            return result
+        return str(result)
 
     def return_connected_pid(self) -> int:
         return self.direct_app_controller.connected_pid  # type: ignore

@@ -9,11 +9,15 @@ from settings.settings import settings
 
 from utils.globals import ALLOWED_CONTROL_TYPES, STRUCTURAL_TYPES
 
+_DIFF_THRESHOLD_PERCENTAGE = 30
+
 
 class DirectAppController:
     def __init__(self) -> None:
         self.application: Application | None = None
         self.connected_pid: int | None = None
+        self._previous_controls: list[ProcessControl] = []
+        self._last_connected_window: str = ""
 
     def _resolve_by_runtime_id(self, window, control_id: str):
         parts = control_id.split("-")
@@ -60,6 +64,8 @@ class DirectAppController:
                 process=process_id
             )
             self.connected_pid = process_id
+            self._previous_controls = []
+            self._last_connected_window = ""
 
             controls_text = ""
             if getattr(
@@ -231,6 +237,58 @@ class DirectAppController:
                 pass
 
         return DirectAppControlListResult(controls=controls)
+
+    def list_controls_diff(self) -> DirectAppControlListResult | str:
+        """Return a diff of controls vs the previous snapshot, or the full list
+        if diffing is disabled, the window/connection changed, or the difference
+        exceeds the threshold."""
+        raw = self.list_controls()
+        if raw.error:
+            self._previous_controls = []
+            return raw
+
+        if not getattr(settings.direct_app_control, "use_diffing", True):
+            self._previous_controls = raw.controls
+            return raw
+
+        current = raw.controls
+
+        try:
+            window_text = self.application.top_window().window_text()  # type: ignore
+        except Exception:
+            window_text = ""
+        if not self._previous_controls or window_text != self._last_connected_window:
+            self._previous_controls = current
+            self._last_connected_window = window_text
+            return raw
+
+        prev_ids = {c.control_id for c in self._previous_controls}
+        curr_ids = {c.control_id for c in current}
+
+        added_ids = curr_ids - prev_ids
+        removed_ids = prev_ids - curr_ids
+
+        self._previous_controls = current
+
+        total_controls = max(len(current), 1)
+        changed_count = len(added_ids) + len(removed_ids)
+        if (changed_count / total_controls) * 100 >= _DIFF_THRESHOLD_PERCENTAGE:
+            return raw
+
+        added = [c for c in current if c.control_id in added_ids]
+        removed = [c for c in self._previous_controls if c.control_id in removed_ids]
+
+        parts = []
+        if added:
+            parts.append("Here are the added controls:")
+            parts.extend(f"\t[+] {c}" for c in added)
+        if removed:
+            parts.append("Here are the removed controls:")
+            parts.extend(f"\t[-] {c}" for c in removed)
+        if not parts:
+            parts.append("No changes to controls since last check.")
+
+        return "\n".join(parts)
 
     def interact(
         self, control_id: str, value: str | None = None
