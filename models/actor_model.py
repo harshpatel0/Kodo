@@ -125,10 +125,15 @@ Use the state below directly instead of re-querying.""",
     chat_response = actor_model.run(user_prompt)
     response = chat_response.content
 
+    tokens_in = chat_response.input_tokens
+    tokens_out = chat_response.output_tokens
+    elapsed_s = chat_response.total_duration_ms / 1000
+    token_rate = round((tokens_in + tokens_out) / elapsed_s, 1) if elapsed_s > 0 else 0
+
     web_emitter.metrics(
         {
-            "tokens_in": chat_response.input_tokens,
-            "tokens_out": chat_response.output_tokens,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
             "elapsed_ms": chat_response.total_duration_ms,
             "model": model_name,
             "provider": model_provider,
@@ -160,7 +165,8 @@ Use the state below directly instead of re-querying.""",
     web_emitter.thinking(chat_response.thinking if chat_response.thinking else "")
 
     logger.info(
-        f"Tokens Used: Input: {chat_response.input_tokens} tokens, Output: {chat_response.output_tokens} tokens. Took {round((chat_response.total_duration_ms)/1000)} seconds"
+        f"Tokens Used: Input: {tokens_in} tokens, Output: {tokens_out} tokens. "
+        f"Took {round(elapsed_s)} seconds. Token rate: {token_rate} tok/s"
     )
 
     logger.info(f"Thinking: \n\t{chat_response.thinking}")

@@ -27,15 +27,25 @@ def make_plan(task: str):
     chat_response = planner_model.run(task=task, skills=planner_skills)
     response = chat_response.content
 
+    tokens_in = chat_response.input_tokens
+    tokens_out = chat_response.output_tokens
+    elapsed_s = chat_response.total_duration_ms / 1000
+    token_rate = round((tokens_in + tokens_out) / elapsed_s, 1) if elapsed_s > 0 else 0
+
     web_emitter.metrics(
         {
-            "tokens_in": chat_response.input_tokens,
-            "tokens_out": chat_response.output_tokens,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
             "elapsed_ms": chat_response.total_duration_ms,
             "model": settings.models.planner.model_name,
             "provider": settings.models.planner.provider,
             "mode": "autonomy" if settings.orchestrator.use_autonomy_mode else "actor",
         }
+    )
+
+    logger.info(
+        f"Tokens Used: Input: {tokens_in} tokens, Output: {tokens_out} tokens. "
+        f"Took {round(elapsed_s)} seconds. Token rate: {token_rate} tok/s"
     )
 
     plan, parse_error = utils.try_parse_json(response)
