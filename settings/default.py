@@ -21,6 +21,11 @@ default_settings = {
             "use_caching": False,
             "cache_ttl_seconds": 300,
         },
+        "openai_compatible": {
+            "api_key_env_var": "OPENAI_COMPATIBLE_API_KEY",
+            "base_url": None,
+            "use_caching": False,
+        },
     },
     "models": {
         "skill_installation": {
