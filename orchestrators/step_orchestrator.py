@@ -109,15 +109,42 @@ class StepOrchestrator:
 
                 time.sleep(ACTION_SETTLE_TIME)
 
-                ar = call_action(
-                    action=self.step_result,
-                    step_count=self.step_count,
-                    iterations=self.iterations,
-                    in_autonomy=self.in_autonomy,
-                    additional_context=self.additional_context,
-                    replan_history=self.replan_history,
-                )
-                self._apply(ar)
+                if isinstance(self.step_result, list):
+                    contexts = []
+                    last_ar = None
+                    for single_action in self.step_result:
+                        if not isinstance(single_action, dict) or "action" not in single_action:
+                            continue
+                        last_ar = call_action(
+                            action=single_action,
+                            step_count=self.step_count,
+                            iterations=self.iterations,
+                            in_autonomy=self.in_autonomy,
+                            additional_context=self.additional_context,
+                            replan_history=self.replan_history,
+                        )
+                        if last_ar.additional_context:
+                            contexts.append(last_ar.additional_context)
+                        time.sleep(ACTION_SETTLE_TIME)
+                        if last_ar and last_ar.hard_exit:
+                            self.hard_exit = True
+                            break
+                    if last_ar:
+                        self._apply(last_ar)
+                    if contexts:
+                        self.additional_context = "\n".join(contexts)
+                    if last_ar and last_ar.signal == "BREAK":
+                        break
+                else:
+                    ar = call_action(
+                        action=self.step_result,
+                        step_count=self.step_count,
+                        iterations=self.iterations,
+                        in_autonomy=self.in_autonomy,
+                        additional_context=self.additional_context,
+                        replan_history=self.replan_history,
+                    )
+                    self._apply(ar)
 
-                if ar.signal == "BREAK":
-                    break
+                    if ar.signal == "BREAK":
+                        break

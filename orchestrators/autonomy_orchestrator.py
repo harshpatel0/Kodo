@@ -217,7 +217,7 @@ History (truncated):
                 self.hard_exit = True
 
             last_action_info = ""
-            if self.step_result.get("action"):
+            if isinstance(self.step_result, dict) and self.step_result.get("action"):
                 last_action_info = (
                     f"[LAST ACTION] action='{self.step_result['action']}' "
                     f"args={{{', '.join(f'{k}={v!r}' for k, v in self.step_result.items() if k != 'action')}}}\n"
@@ -249,7 +249,58 @@ History (truncated):
 
             self.iterations += 1
 
-            if self.step_result.get("install_skills"):
+            if isinstance(self.step_result, list):
+                contexts = []
+                history_parts = []
+                directives = []
+                for single_action in self.step_result:
+                    if not isinstance(single_action, dict) or "action" not in single_action:
+                        continue
+                    ar = call_action(
+                        action=single_action,
+                        iterations=self.iterations,
+                        in_autonomy=True,
+                        additional_context=self.additional_context,
+                    )
+                    if ar.additional_context:
+                        contexts.append(ar.additional_context)
+                    if ar.directive:
+                        directives.append(ar.directive)
+                    if single_action.get("action") not in (
+                        "create_daemon",
+                        "unregister_daemon",
+                    ):
+                        deterministic = self._make_deterministic_history(
+                            ar, single_action
+                        )
+                        if deterministic:
+                            history_parts.append(deterministic)
+                        else:
+                            history_parts.append(
+                                single_action.get("history", "None")
+                            )
+                    time.sleep(settings.orchestrator.action_settle_time)
+                    if ar.hard_exit:
+                        self.hard_exit = True
+                        break
+                self._cleanup()
+                if contexts:
+                    self.additional_context = "\n".join(contexts)
+                for d in directives:
+                    self.directive.append(d)
+                combined_history = " | ".join(history_parts) if history_parts else ""
+                if history_parts:
+                    self.history.append(combined_history)
+                if settings.orchestrator.autonomy_orchestrator.toast_notify_history and combined_history:
+                    from winotify import Notification
+                    toast = Notification(
+                        app_id="Kodo",
+                        title="Kodo Step Result (Batch)",
+                        msg=combined_history,
+                    )
+                    toast.show()
+
+            elif self.step_result.get("install_skills"):
                 self._handle_skill_installation(self.step_result["skills"])
                 self.history.append(self.step_result.get("history", "None"))
 

@@ -1,43 +1,42 @@
-# Minecraft — Actor Guide (MCP) — FundamentalLabs
+# Minecraft — Actor Guide (@fundamentallabs/minecraft-mcp)
 
-Provides full Minecraft bot control via the `minecraft` MCP server (`@fundamentallabs/minecraft-mcp`).
+Full Minecraft bot control via the `minecraft` MCP server (`@fundamentallabs/minecraft-mcp`).
 
 ## Calling Convention
 
 Every tool call must be wrapped in the dispatcher's `mcp_tool_call` envelope.
-**Do NOT prefix tool names — use the bare name.**
+**Do NOT prefix tool names — use the bare camelCase name.**
+
+Output either a **single action object** or a **JSON array** of actions to execute multiple in one turn:
 
 ```json
 {"action": "mcp_tool_call", "tool": "<tool_name>", "arguments": {...}, "history": "<what you did>"}
 ```
 
-The JSON shown under each tool heading is the `arguments` payload only.
+```json
+[
+  {"action": "mcp_tool_call", "tool": "mineResource", "arguments": {"name": "oak_log", "count": 5}, "history": "Mined 5 logs"},
+  {"action": "mcp_tool_call", "tool": "mineResource", "arguments": {"name": "oak_log", "count": 5}, "history": "Mined 5 more logs"}
+]
+```
+
+The JSON shown under each tool heading is the `arguments` payload only. Refer to the actual MCP tool schemas in your system prompt for exact parameter types and requirements.
+
+**You are the same agent across all turns.** The History shows what *you* already did — read it and continue. Do not reinvent the plan each turn.
+
+**Use batched actions** for predictable sequences (e.g. mining multiple resources). Keep batches under ~8 actions.
 
 ---
 
-## Bot Management (start here)
+## First Thing: Join the Game
 
-### joinGame
-
-Spawn a bot. **Call this first before any other tool.**
+**The bot does NOT auto-connect.** You must call `joinGame` as your very first action.
 
 ```json
-{"action": "mcp_tool_call", "tool": "joinGame", "arguments": {"username": "Kodo", "host": "localhost", "port": 25565}, "history": "Joined game"}
+{"action": "mcp_tool_call", "tool": "joinGame", "arguments": {"username": "Kodo"}, "history": "Spawned bot Kodo"}
 ```
 
-- `username` (required): Bot's username
-- `host` (optional, default: `localhost`)
-- `port` (optional, default: `25565`)
-
-### leaveGame
-
-Disconnect bot(s).
-
-```json
-{"action": "mcp_tool_call", "tool": "leaveGame", "arguments": {"username": "Kodo"}, "history": "Left game"}
-```
-
-- `disconnectAll`: `true` to disconnect all bots
+Do this once per session. All subsequent tools require the bot to be spawned first.
 
 ---
 
@@ -45,54 +44,18 @@ Disconnect bot(s).
 
 ### goToKnownLocation
 
-Navigate to specific coordinates.
+Navigate to specific coordinates (uses pathfinding).
 
 ```json
-{"action": "mcp_tool_call", "tool": "goToKnownLocation", "arguments": {"x": 100, "y": 64, "z": 200}, "history": "Went to location"}
+{"action": "mcp_tool_call", "tool": "goToKnownLocation", "arguments": {"x": 100, "y": 64, "z": 200}, "history": "Moved to target"}
 ```
 
 ### goToSomeone
 
-Navigate to another player.
+Navigate to another player. Optional `distance` (default 3), `keepFollowing` (default false).
 
 ```json
-{"action": "mcp_tool_call", "tool": "goToSomeone", "arguments": {"username": "Player1"}, "history": "Went to player"}
-```
-
-### runAway
-
-Run away from threats.
-
-```json
-{"action": "mcp_tool_call", "tool": "runAway", "arguments": {}, "history": "Ran away"}
-```
-
-### swimToLand
-
-Swim to nearest land when in water.
-
-```json
-{"action": "mcp_tool_call", "tool": "swimToLand", "arguments": {}, "history": "Swam to land"}
-```
-
----
-
-## Combat & Hunting
-
-### attackSomeone
-
-Attack players, mobs, or animals.
-
-```json
-{"action": "mcp_tool_call", "tool": "attackSomeone", "arguments": {"name": "zombie"}, "history": "Attacked zombie"}
-```
-
-### hunt
-
-Hunt animals or mobs.
-
-```json
-{"action": "mcp_tool_call", "tool": "hunt", "arguments": {"name": "sheep", "count": 3}, "history": "Hunted sheep"}
+{"action": "mcp_tool_call", "tool": "goToSomeone", "arguments": {"userName": "f1ameyy", "distance": 3}, "history": "Went to f1ameyy"}
 ```
 
 ---
@@ -101,26 +64,46 @@ Hunt animals or mobs.
 
 ### mineResource
 
-Mine specific blocks or resources. **Note: This only targets blocks exposed to air — it cannot mine buried/underground blocks.**
+Mine a specific block type. Parameter is `name` (block ID) and `count`.
 
 ```json
-{"action": "mcp_tool_call", "tool": "mineResource", "arguments": {"name": "stone", "count": 10}, "history": "Mined stone"}
-```
-
-### harvestMatureCrops
-
-Harvest mature crops from farmland.
-
-```json
-{"action": "mcp_tool_call", "tool": "harvestMatureCrops", "arguments": {}, "history": "Harvested crops"}
+{"action": "mcp_tool_call", "tool": "mineResource", "arguments": {"name": "oak_log", "count": 10}, "history": "Mined 10 oak logs"}
 ```
 
 ### pickupItem
 
-Pick up items from the ground.
+Pick up items from the ground nearby.
+
+---
+
+## Building
+
+### buildSomething (PREFERRED for structures)
+
+**Requires cheats/operator permissions.** Build structures using Minecraft commands (`/fill`, `/setblock`, etc.). Two modes:
+
+**Script mode** — array of command objects:
+```json
+{"action": "mcp_tool_call", "tool": "buildSomething", "arguments": {"buildScript": [
+  {"command": "fill", "x1": 0, "y1": 64, "z1": 0, "x2": 10, "y2": 64, "z2": 10, "block": "stone"},
+  {"command": "fill", "x1": 1, "y1": 65, "z1": 1, "x2": 9, "y2": 68, "z2": 9, "block": "oak_planks"},
+  {"command": "setblock", "x": 5, "y": 65, "z": 1, "block": "oak_door"}
+]}, "history": "Built house via commands"}
+```
+
+**Code mode** — JavaScript string for dynamic building:
+```json
+{"action": "mcp_tool_call", "tool": "buildSomething", "arguments": {"code": "fill(pos.x-5, pos.y, pos.z-5, pos.x+5, pos.y+4, pos.z+5, 'oak_planks'); log('Done!');"}, "history": "Built structure via code"}
+```
+
+Supporting commands: `setblock`, `fill`, `clone`, `summon`, `give`, `raw`. All coordinates are relative to the bot's current position.
+
+### placeItemNearYou
+
+Place a specific block or item near the bot. **Unlike the old server, this DOES accept `itemName`.**
 
 ```json
-{"action": "mcp_tool_call", "tool": "pickupItem", "arguments": {}, "history": "Picked up items"}
+{"action": "mcp_tool_call", "tool": "placeItemNearYou", "arguments": {"itemName": "stone", "userName": "f1ameyy"}, "history": "Placed stone near f1ameyy"}
 ```
 
 ---
@@ -129,235 +112,108 @@ Pick up items from the ground.
 
 ### craftItems
 
-Craft items using a crafting table.
+Craft items using a crafting table or inventory.
 
 ```json
-{"action": "mcp_tool_call", "tool": "craftItems", "arguments": {"item": "stone_pickaxe", "count": 1}, "history": "Crafted stone pickaxe"}
+{"action": "mcp_tool_call", "tool": "craftItems", "arguments": {"item": "oak_planks", "count": 40}, "history": "Crafted 40 oak planks"}
 ```
 
-### cookItem
+### cookItem / smeltItem
 
-Cook items in a furnace.
-
-```json
-{"action": "mcp_tool_call", "tool": "cookItem", "arguments": {"item": "beef", "count": 3}, "history": "Cooked beef"}
-```
-
-### smeltItem
-
-Smelt items in a furnace.
-
-```json
-{"action": "mcp_tool_call", "tool": "smeltItem", "arguments": {"item": "iron_ore", "count": 3}, "history": "Smelted iron ore"}
-```
+Cook food / smelt items in a furnace.
 
 ### retrieveItemsFromNearbyFurnace
 
-Get smelted items from furnace.
-
-```json
-{"action": "mcp_tool_call", "tool": "retrieveItemsFromNearbyFurnace", "arguments": {}, "history": "Retrieved from furnace"}
-```
+Get smelted/cooked items from a furnace.
 
 ---
 
-## Inventory Management
+## Inventory
 
 ### openInventory
 
 Open the bot's inventory.
 
-```json
-{"action": "mcp_tool_call", "tool": "openInventory", "arguments": {}, "history": "Opened inventory"}
-```
-
 ### equipItem
 
 Equip armor, tools, or weapons.
-
-```json
-{"action": "mcp_tool_call", "tool": "equipItem", "arguments": {"item": "iron_pickaxe", "destination": "hand"}, "history": "Equipped pickaxe"}
-```
 
 ### dropItem
 
 Drop items from inventory.
 
-```json
-{"action": "mcp_tool_call", "tool": "dropItem", "arguments": {"item": "dirt", "count": 5}, "history": "Dropped dirt"}
-```
-
 ### giveItemToSomeone
 
 Give items to another player.
 
-```json
-{"action": "mcp_tool_call", "tool": "giveItemToSomeone", "arguments": {"item": "diamond", "count": 1, "username": "Player1"}, "history": "Gave diamond"}
-```
-
 ---
 
-## Building & Farming
+## Communication
 
-### placeItemNearYou
+### sendChat
 
-Place blocks near the bot.
+Send chat messages or commands (starting with `/`).
 
 ```json
-{"action": "mcp_tool_call", "tool": "placeItemNearYou", "arguments": {"item": "crafting_table", "count": 1}, "history": "Placed crafting table"}
+{"action": "mcp_tool_call", "tool": "sendChat", "arguments": {"message": "Hello everyone!"}, "history": "Sent chat"}
 ```
 
-### prepareLandForFarming
-
-Prepare land for farming.
-
+Send a command:
 ```json
-{"action": "mcp_tool_call", "tool": "prepareLandForFarming", "arguments": {}, "history": "Prepared farmland"}
-```
-
-### useItemOnBlockOrEntity
-
-Use items on blocks or entities.
-
-```json
-{"action": "mcp_tool_call", "tool": "useItemOnBlockOrEntity", "arguments": {"item": "bone_meal", "target": "wheat"}, "history": "Used bone meal"}
-```
-
----
-
-## Survival
-
-### eatFood
-
-Eat food to restore hunger.
-
-```json
-{"action": "mcp_tool_call", "tool": "eatFood", "arguments": {}, "history": "Ate food"}
-```
-
-### rest
-
-Rest to regain health.
-
-```json
-{"action": "mcp_tool_call", "tool": "rest", "arguments": {}, "history": "Rested"}
-```
-
-### sleepInNearbyBed
-
-Find and sleep in a bed.
-
-```json
-{"action": "mcp_tool_call", "tool": "sleepInNearbyBed", "arguments": {}, "history": "Slept in bed"}
-```
-
----
-
-## Storage
-
-### openNearbyChest
-
-Open a nearby chest.
-
-```json
-{"action": "mcp_tool_call", "tool": "openNearbyChest", "arguments": {}, "history": "Opened chest"}
-```
-
----
-
-## Vision & Communication
-
-### lookAround
-
-Look around and observe the environment.
-
-```json
-{"action": "mcp_tool_call", "tool": "lookAround", "arguments": {}, "history": "Looked around"}
+{"action": "mcp_tool_call", "tool": "sendChat", "arguments": {"message": "/give @p stone 64"}, "history": "Gave stone"}
 ```
 
 ### readChat
 
-Read recent chat messages.
+Read recent chat messages. Supports filtering.
 
 ```json
-{"action": "mcp_tool_call", "tool": "readChat", "arguments": {"count": 10, "timeLimit": 300}, "history": "Read chat"}
+{"action": "mcp_tool_call", "tool": "readChat", "arguments": {"count": 30, "filterType": "chat"}, "history": "Read recent chat"}
 ```
 
-- `timeLimit`: seconds (default: 300)
-- `filterType`: `"chat"` for player messages only
-
-### sendChat
-
-Send chat messages or commands.
-
-```json
-{"action": "mcp_tool_call", "tool": "sendChat", "arguments": {"message": "Hello!"}, "history": "Sent chat"}
-```
-
-- `delay`: ms to wait before sending
+**Chat dedup:** Track which messages you've replied to. Do not respond twice. Respond to new messages and any mentioning "Kodo". **Respond to all chat from players immediately** — drop what you're doing.
 
 ---
 
-## Progression Sequence
+## Daemons
 
-### Start: Join game
+Always daemonize these on every Minecraft task:
+1. `readChat` — monitor incoming chat messages
+2. Any other read-only tool useful for the task
 
-```json
-{"action": "mcp_tool_call", "tool": "joinGame", "arguments": {"username": "Kodo", "host": "localhost", "port": 25565}, "history": "Joined game"}
-```
+Daemon results are fresh each turn — **never re-query daemonized tools.**
 
-### Check inventory
+---
 
-```json
-{"action": "mcp_tool_call", "tool": "openInventory", "arguments": {}, "history": "Opened inventory"}
-```
+## Working Memory (Directives)
 
-### Punch wood → craft planks → crafting table
+Store your full game plan as a directive on turn 1. Future turns read it and continue. When done, mark the old plan as DONE.
 
 ```json
-{"action": "mcp_tool_call", "tool": "mineResource", "arguments": {"name": "oak_log", "count": 3}, "history": "Mined wood"}
+{"action": "directive", "directive": "PLAN: Build a starter house. 1. joinGame. 2. get position. 3. buildSomething with buildScript for a 10x10 stone house.", "history": "Saved plan"}
 ```
 
+When done:
 ```json
-{"action": "mcp_tool_call", "tool": "craftItems", "arguments": {"item": "oak_planks", "count": 4}, "history": "Crafted planks"}
+{"action": "directive", "directive": "DONE: Built starter house.", "history": "Marked done"}
 ```
 
-```json
-{"action": "mcp_tool_call", "tool": "craftItems", "arguments": {"item": "crafting_table", "count": 1}, "history": "Crafted table"}
-```
+**Follow your own plan.** After storing a directive, do what it says. Don't replan each turn.
 
-### Place crafting table → stone pickaxe
+---
 
-```json
-{"action": "mcp_tool_call", "tool": "placeItemNearYou", "arguments": {"item": "crafting_table", "count": 1}, "history": "Placed table"}
-```
+## Game Knowledge
 
-```json
-{"action": "mcp_tool_call", "tool": "mineResource", "arguments": {"name": "stone", "count": 8}, "history": "Mined stone"}
-```
-
-```json
-{"action": "mcp_tool_call", "tool": "craftItems", "arguments": {"item": "stone_pickaxe", "count": 1}, "history": "Crafted stone pickaxe"}
-```
-
-### Iron pickaxe
-
-```json
-{"action": "mcp_tool_call", "tool": "mineResource", "arguments": {"name": "iron_ore", "count": 3}, "history": "Mined iron ore"}
-```
-
-```json
-{"action": "mcp_tool_call", "tool": "placeItemNearYou", "arguments": {"item": "furnace", "count": 1}, "history": "Placed furnace"}
-```
-
-```json
-{"action": "mcp_tool_call", "tool": "smeltItem", "arguments": {"item": "iron_ore", "count": 3}, "history": "Smelted iron"}
-```
-
-```json
-{"action": "mcp_tool_call", "tool": "retrieveItemsFromNearbyFurnace", "arguments": {}, "history": "Got iron ingots"}
-```
-
-```json
-{"action": "mcp_tool_call", "tool": "craftItems", "arguments": {"item": "iron_pickaxe", "count": 1}, "history": "Crafted iron pickaxe"}
-```
+- **Must call `joinGame({"username": "Kodo"})` first** — bot does not auto-spawn.
+- **For building structures, use `buildSomething`** — requires operator/cheat permissions. Uses `/fill` and `/setblock` commands directly. No inventory needed.
+- **`placeItemNearYou` accepts `itemName`** — unlike the old server's `place-block`.
+- **`mineResource` replaces `dig-block` and `find-blocks`** — specify `name` (block type) and `count`.
+- **`craftItems` replaces `craft-item`** — specify `item` name and `count`.
+- **`goToKnownLocation` replaces `move-to-position`** — navigate to coordinates.
+- **All tool names are camelCase** — NOT kebab-case. E.g. `buildSomething`, not `build-something`.
+- **`sendChat` can send commands** — prefix with `/` (e.g. `/give`, `/time`, `/gamemode`).
+- **`readChat` supports filtering** — use `filterType: "chat"` for player messages only.
+- **Creative mode**: Use `buildSomething` for structures. No need to gather resources.
+- **Store your plan as a directive on turn 1** — then execute it. Don't replan each turn.
+- **Always daemonize:** `readChat` and any other read-only state you need.
+- **Never re-query daemonized tools** — results are fresh every turn.

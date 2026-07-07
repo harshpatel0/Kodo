@@ -17,8 +17,9 @@ Daemons **do** have side effects: the `daemon_action` is dispatched through `par
 ## CONSTRAINTS
 
 - **Observation only:** daemons gather context, they do not drive workflow. Use the action pipeline for execution.
-- **Trust daemon results** the same as your own actions — they are another thread running concurrently with high reliability. Do not re-query daemonized tools unless you need a fresh value mid-step.
+- **Trust daemon results** the same as your own actions — they run every turn and inject fresh context. Never re-query daemonized tools.
+- **History is you.** Each turn you see what *you* did before. If a directive or past action already set a plan, follow it — don't recreate it. You are not a new agent each turn; you are the same agent continuing your work. Stop planning and start doing.
 - **Side effects are real:** each daemon calls `parse_action` every step. Daemonizing a `pc_actions` action like `click` means clicking the exact same spot every single turn. Never daemonize anything that mutates state — it will repeat endlessly.
 - **Keep it light:** daemons run synchronously. Heavy ones slow every step.
-- **Unregister when done:** stale daemons waste tokens.
+- **Daemons are auto-cleaned.** When you emit `done`, remaining daemons are unregistered automatically. Do NOT manually unregister daemons — never use `unregister_daemon` in your actions. The system handles cleanup.
 - **Do not use daemons to watch `direct_app_control` controls.** There is already a user setting (`settings.direct_app_control.always_populate_connected_app_controls`) that injects controls into context automatically. If you create a daemon that calls `direct_app_control` actions, it will observe the **same already-connected window** — it cannot watch a different window than the one already connected.
