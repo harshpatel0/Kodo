@@ -22,7 +22,8 @@ ACTOR_MODEL_DEBUG_USER_PROMPT_CONSTRUCTION_TO_FILE = "dbg_actor_model.txt"
 MODEL_DEFINITIONS_ENABLE_DEBUG_OLLAMA_REQUESTS = False
 MODEL_DEFINITIONS_DEBUG_OLLAMA_REQUESTS_TO_FILE = "dbg_make_ollama_request.txt"
 
-# Only Ollama will support diffs, because the same model is used when sending messages, the other providers do not expose a way to send a message to the same session, every message is a new agent which means the diff is useless to them because they never had the starting UI tree to begin with.
+# Threshold for switching from diff to full UI tree.
+# When the proportion of changed elements exceeds this percentage the full tree is sent.
 CONTEXT_PROVIDER_UI_DIFF_THRESHOLD_PERCENTAGE = 30
 
 ALLOWED_CONTROL_TYPES = {

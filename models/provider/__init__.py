@@ -58,6 +58,26 @@ def clear_provider_cache():
     _PROVIDER_CACHE.clear()
 
 
+def _get_global_caching():
+    return getattr(settings, "caching", None)
+
+
+def _get_use_caching(provider_cfg) -> bool:
+    global_cfg = _get_global_caching()
+    return getattr(
+        provider_cfg, "use_caching",
+        getattr(global_cfg, "enabled", False) if global_cfg else False,
+    )
+
+
+def _get_cache_ttl(provider_cfg) -> int:
+    global_cfg = _get_global_caching()
+    return getattr(
+        provider_cfg, "cache_ttl_seconds",
+        getattr(global_cfg, "ttl_seconds", 300) if global_cfg else 300,
+    )
+
+
 def _create_ollama_provider() -> OllamaProvider:
     cfg = settings.model_providers.ollama
     return OllamaProvider(
@@ -71,7 +91,7 @@ def _create_anthropic_provider() -> AnthropicProvider:
     return AnthropicProvider(
         api_key_env_var=getattr(cfg, "api_key_env_var", "ANTHROPIC_API_KEY"),
         base_url=getattr(cfg, "base_url", None),
-        use_caching=getattr(cfg, "use_caching", False),
+        use_caching=_get_use_caching(cfg),
     )
 
 
@@ -79,6 +99,6 @@ def _create_google_provider() -> GoogleProvider:
     cfg = settings.model_providers.google
     return GoogleProvider(
         api_key_env_var=getattr(cfg, "api_key_env_var", "GOOGLE_API_KEY"),
-        use_caching=getattr(cfg, "use_caching", False),
-        cache_ttl_seconds=getattr(cfg, "cache_ttl_seconds", 300),
+        use_caching=_get_use_caching(cfg),
+        cache_ttl_seconds=_get_cache_ttl(cfg),
     )

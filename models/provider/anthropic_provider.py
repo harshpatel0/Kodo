@@ -4,6 +4,7 @@ from .base import ModelProvider, ChatMessage, ChatResponse
 from utils.logger import logger
 import anthropic as _anthropic
 from settings.settings import settings
+from models.provider.utils.cache_control import CacheControl
 
 from utils.runtime_globals import CURRENT_MODE
 
@@ -48,6 +49,7 @@ class AnthropicProvider(ModelProvider):
             kwargs["base_url"] = base_url
         self._client = _anthropic.Anthropic(**kwargs)
         self.use_caching = determine_caching(use_caching)
+        self.bank = CacheControl(system_prompt="")
 
     def chat(
         self,
@@ -85,6 +87,11 @@ class AnthropicProvider(ModelProvider):
                     )
             api_messages.append({"role": role, "content": content})
 
+        if self.use_caching and api_messages:
+            last_content = api_messages[-1]["content"]
+            if last_content:
+                last_content[-1]["cache_control"] = {"type": "ephemeral"}
+
         call_kwargs = {
             "model": model,
             "messages": api_messages,
@@ -115,6 +122,10 @@ class AnthropicProvider(ModelProvider):
             }
 
         try:
+            for msg in api_messages:
+                for block in msg["content"]:
+                    if block.get("type") == "text":
+                        self.bank.append(block["text"])
             response = self._client.messages.create(**call_kwargs)
         except _anthropic.APIError as e:
             logger.error(f"Anthropic API error: {e}")
@@ -129,6 +140,7 @@ class AnthropicProvider(ModelProvider):
                 thinking = (thinking or "") + block.thinking
 
         elapsed_time = int((time.monotonic() - timer_start) * 1000)
+        self.bank.append(content.strip())
 
         return ChatResponse(
             content=content.strip(),
