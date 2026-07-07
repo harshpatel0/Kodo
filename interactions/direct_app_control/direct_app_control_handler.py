@@ -55,7 +55,7 @@ class DirectAppControlHandler:
             _restore_foreground(previous_fg)
 
     def _handle(self, action: dict):
-        if action["action"] not in ["list_processes", "connect"]:
+        if action["action"] not in ["list_processes", "list_controls", "connect"]:
             try:
                 control_id = action["control_id"]
             except Exception:
