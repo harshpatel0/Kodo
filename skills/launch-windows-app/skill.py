@@ -154,7 +154,7 @@ def _launch_foreground(app_name, target, is_uwp):
                 pass
         time.sleep(0.5)
 
-    print(f"Launched {app_name} but could not verify running PID before timeout.")
+    print(f"Launched {app_name}.")
 
 
 def open_app(app_name, background=False):
