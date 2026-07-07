@@ -17,12 +17,6 @@ from utils.globals import (
 )
 
 
-def _get_active_provider() -> str:
-    if settings.orchestrator.use_autonomy_mode:
-        return getattr(settings.models.autonomy_actor, "provider", "ollama")
-    return getattr(settings.models.actor, "provider", "ollama")
-
-
 class ContextProvider:
     installed_apps = []
     WINDOWS_VERSION = (
@@ -290,13 +284,9 @@ class UITreeHandler:
             logger.debug(f"Returning full UI Tree (window changed)\n{return_message}")
             return return_message
 
-        # Always send the full tree if the provider is not Ollama
-
-        if _get_active_provider() != "ollama":
+        if not settings.context_provider.use_diffing:
             self.current_tree = self.context_provider.get_ui_tree()
-            logger.debug(
-                "Diffed UI Trees are unsupported for the current provider, only Ollama supports diffed trees, the full tree is being sent"
-            )
+            logger.debug("Diffing disabled, returning full UI tree")
             return "Here is the full UI tree\n" + "\n".join(self.current_tree)
 
         added_items, removed_items = self._get_tree()
