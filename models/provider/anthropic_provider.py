@@ -15,7 +15,7 @@ def determine_caching(setting_state: bool):
     """Disable Caching if the mode is not ACTOR or AUTONOMY as cache invalidation penalties will apply
     if planner or skill_installation mode prompts are cached
     """
-    if setting_state and (CURRENT_MODE != "ACTOR" or CURRENT_MODE != "AUTONOMY"):
+    if setting_state and CURRENT_MODE in ("ACTOR", "AUTONOMY"):
         return True
     return False
 
@@ -116,10 +116,12 @@ class AnthropicProvider(ModelProvider):
                 1.0  # Enabling Thinking forces temperature to 1.0
             )
             call_kwargs["max_tokens"] = 16384
-        if settings.model_providers.effort:
-            call_kwargs["output_config"] = {
-                "effort": settings.model_providers.anthropic.effort
-            }
+        try:
+            anthropic_effort = settings.model_providers.anthropic.effort
+            if anthropic_effort:
+                call_kwargs["output_config"] = {"effort": anthropic_effort}
+        except AttributeError:
+            pass
 
         try:
             for msg in api_messages:
