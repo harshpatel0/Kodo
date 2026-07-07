@@ -81,4 +81,5 @@ AVAILABLE_INTERACTION_LAYERS: list[str] = [
     # Action Helpers - These are interactions that try to help the LLM in it's task, daemons allow you to run an action in each turn, and multi_actions allow multiple actions to be ran
     "daemons",
     "multi_actions",
+    "watchdog",
 ]

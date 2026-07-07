@@ -206,6 +206,19 @@ def parse_action(
             daemon_provider.unregister_daemon(action["index"])
             return PrimitiveActionResult(action=action, command="PROCEED")
 
+        case "watchdog" if check_layer("watchdog"):
+            from interactions.watchdog.watchdog import (
+                watchdog_provider,
+                WatchdogAction,
+            )
+
+            inner_action = action["watchdog_action"]
+            timeout = int(action.get("timeout", 15))
+            result = watchdog_provider.start_watchdog(inner_action, timeout)
+            if isinstance(result, WatchdogAction):
+                return result.action_result
+            return result
+
         case _:
             logger.warning(f"Unknown action: {action['action']}")
             return_command = "RETRY"
