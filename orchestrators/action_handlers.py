@@ -15,6 +15,9 @@ from interactions.direct_app_control.types import *
 
 from interactions.skills.types import KodoSkillResult
 
+_consecutive_tool_errors: dict[str, int] = {}
+MAX_CONSECUTIVE_TOOL_ERRORS = 3
+
 
 def handle_proceed(step_count: int, iterations: int, in_autonomy: bool) -> ActionResult:
     if not in_autonomy:
@@ -271,7 +274,27 @@ def call_action(
         )
 
     elif isinstance(parsed_action, CallToolResult):
-        action_result = handle_mcp_tool_call_result(parsed_action)
+        tool_name = action.get("tool", action.get("action", ""))
+        if parsed_action.isError:
+            _consecutive_tool_errors[tool_name] = (
+                _consecutive_tool_errors.get(tool_name, 0) + 1
+            )
+        else:
+            _consecutive_tool_errors[tool_name] = 0
+
+        consecutive = _consecutive_tool_errors.get(tool_name, 0)
+        if consecutive >= MAX_CONSECUTIVE_TOOL_ERRORS:
+            _consecutive_tool_errors[tool_name] = 0
+            action_result = ActionResult(
+                signal="CONTINUE",
+                additional_context=(
+                    f"The tool '{tool_name}' has failed {consecutive} consecutive times with the same error pattern. "
+                    f"STOP using this tool in this way. You MUST choose a completely different approach. "
+                    f"Do not retry the same tool again."
+                ),
+            )
+        else:
+            action_result = handle_mcp_tool_call_result(parsed_action)
 
     elif isinstance(parsed_action, DirectAppConnectionResult):
         connection_result_boolean = parsed_action.success
