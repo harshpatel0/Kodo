@@ -108,17 +108,27 @@ class AutonomyOrchestrator:
                 return None
             combined = "; ".join(texts)
             error_tag = " [ERROR]" if raw.isError else ""
+            if raw.isError:
+                if estimate_tokens(combined) > 60:
+                    return f"[ERROR]{error_tag}"
+            elif estimate_tokens(combined) > 30:
+                return None
             if len(combined) <= 200:
                 return f"{combined}{error_tag}"
             return f"{combined[:197]}{error_tag}..."
 
         if isinstance(raw, KodoSkillResult):
             parts = []
+            has_error = raw.result in ("ERROR", "TIMEOUT")
             if raw.skill_output:
-                parts.append(raw.skill_output[:200])
-            if raw.result in ("ERROR", "TIMEOUT") and raw.skill_errors:
-                err = raw.skill_errors[:200]
-                parts.append(f"error: {err}")
+                if estimate_tokens(raw.skill_output) <= (60 if has_error else 30):
+                    parts.append(raw.skill_output[:200])
+            if has_error and raw.skill_errors:
+                if estimate_tokens(raw.skill_errors) <= 60:
+                    err = raw.skill_errors[:200]
+                    parts.append(f"error: {err}")
+                else:
+                    parts.append("[ERROR]")
             return " | ".join(parts) if parts else None
 
         error = getattr(raw, "error", None) or getattr(raw, "error_message", None)
