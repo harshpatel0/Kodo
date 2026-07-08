@@ -193,6 +193,12 @@ class GoogleProvider(ModelProvider):
                     )
                     time.sleep(60)
                     continue
+                if status_code == 429:
+                    logger.warning(
+                        f"Google AI API rate limit exceeded. Waiting 10 seconds before retry (attempt {attempt+1}/3)..."
+                    )
+                    time.sleep(10)
+                    continue
                 logger.error(
                     f"Google AI API error (HTTP {status_code or 'unknown'}): {e}"
                 )

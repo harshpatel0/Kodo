@@ -8,11 +8,12 @@ Pre-tested procedure for a known task, provisioned via `skill_installation` mode
 
 ## INVOKING
 
-```json
-{"action": "skill_action", "param": "value", "history": "string"}
-```
+Each installed skill registers its own action names. Use the action name directly — there is no generic `skill_action` wrapper. For example, the `filesystem` skill registers `create_file`, `read_file`, `write_to_file`, etc.
 
-Replaces any other layer's action when a matching skill is installed.
+The available action names are listed in the skill summary. Call them like any other action:
+```json
+{"action": "create_file", "path": "C:\\path\\to\\file.txt", "content": "...", "history": "string"}
+```
 
 ---
 
