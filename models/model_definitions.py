@@ -216,7 +216,7 @@ OS: {context_provider.WINDOWS_VERSION}
 Screen: {context_provider.screen_width}x{context_provider.screen_height}
 
 # Registered MCP Servers
-The following MCP tools are available this session. When you use an MCP tool, all interaction with that tool's domain (e.g. the browser it opened, the service it connects to) MUST use MCP only — do not mix in DAC, pc_actions, or skills. MCP is a self-contained external protocol.
+The following MCP tools are available this session. When you use an MCP tool, all interaction with that tool's domain (e.g. the browser it opened, the service it connects to) MUST use MCP only, do not mix in direct app control, keyboard and mouse actions, or skills. MCP is a self-contained external protocol.
 
 {mcp_registry.get_tool_schemas()}
     """
@@ -226,7 +226,9 @@ The following MCP tools are available this session. When you use an MCP tool, al
 
     def construct_user_prompt(self, task, instruction=None, expected_result=None):
         instruction_line = f"\nInstructions: {instruction}" if instruction else ""
-        expected_line = f"\nExpected Result: {expected_result}" if expected_result else ""
+        expected_line = (
+            f"\nExpected Result: {expected_result}" if expected_result else ""
+        )
         user_prompt = f"""
 # Step Context
 Current Task: {task}{instruction_line}{expected_line}
