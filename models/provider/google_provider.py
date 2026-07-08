@@ -15,7 +15,7 @@ def determine_caching(setting_state: bool):
     """Disable Caching if the mode is not ACTOR or AUTONOMY as cache invalidation penalties will apply
     if planner or skill_installation mode prompts are cached
     """
-    if setting_state and (CURRENT_MODE != "ACTOR" or CURRENT_MODE != "AUTONOMY"):
+    if setting_state and CURRENT_MODE in ("ACTOR", "AUTONOMY"):
         return True
     return False
 
