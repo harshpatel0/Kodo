@@ -8,11 +8,11 @@ Pre-tested procedure for a known task, provisioned via `skill_installation` mode
 
 ## INVOKING
 
-```json
-{"action": "skill_action", "param": "value", "history": "string"}
-```
+Each installed skill registers its own action names. The action to call will be specified in the task — use that action name directly. No generic `skill_action` wrapper.
 
-Replaces any other layer's action when a matching skill is installed.
+```json
+{"action": "<action_name>", "<param>": "<value>", "history": "string"}
+```
 
 ---
 
