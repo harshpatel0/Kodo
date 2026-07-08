@@ -256,14 +256,19 @@ History (truncated):
                     "message": f"Step execution error: {e}",
                 }
 
+            self.runtime_skills = None
             self.iterations += 1
 
             if isinstance(self.step_result, list):
                 contexts = []
                 history_parts = []
                 directives = []
+                last_ar = None
                 for single_action in self.step_result:
-                    if not isinstance(single_action, dict) or "action" not in single_action:
+                    if (
+                        not isinstance(single_action, dict)
+                        or "action" not in single_action
+                    ):
                         continue
                     ar = call_action(
                         action=single_action,
@@ -271,6 +276,7 @@ History (truncated):
                         in_autonomy=True,
                         additional_context=self.additional_context,
                     )
+                    last_ar = ar
                     if ar.additional_context:
                         contexts.append(ar.additional_context)
                     if ar.directive:
@@ -285,14 +291,15 @@ History (truncated):
                         if deterministic:
                             history_parts.append(deterministic)
                         else:
-                            history_parts.append(
-                                single_action.get("history", "None")
-                            )
+                            history_parts.append(single_action.get("history", "None"))
                     time.sleep(settings.orchestrator.action_settle_time)
                     if ar.hard_exit:
                         self.hard_exit = True
                         break
-                self._cleanup()
+                if not self.hard_exit:
+                    self._cleanup()
+                if last_ar:
+                    self._apply(last_ar)
                 if contexts:
                     self.additional_context = "\n".join(contexts)
                 for d in directives:
@@ -300,8 +307,12 @@ History (truncated):
                 combined_history = " | ".join(history_parts) if history_parts else ""
                 if history_parts:
                     self.history.append(combined_history)
-                if settings.orchestrator.autonomy_orchestrator.toast_notify_history and combined_history:
+                if (
+                    settings.orchestrator.autonomy_orchestrator.toast_notify_history
+                    and combined_history
+                ):
                     from winotify import Notification
+
                     toast = Notification(
                         app_id="Kodo",
                         title="Kodo Step Result (Batch)",

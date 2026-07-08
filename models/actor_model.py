@@ -101,12 +101,12 @@ def do_step(
         user_prompt = actor_model.return_prompt_with_additional_context(
             user_prompt=user_prompt,
             additional_context=str(daemon_provider),
-            accompanying_message="""# Continuous Watchers (Daemons)
-This is the CURRENT STATE from your persistent watchers — injected every turn automatically.
-You do NOT need to manually call these tools as mcp_tool_call actions — the daemon already watches them.
-Use the state below directly instead of re-querying.""",
+            accompanying_message="""# Continuous Watchers (Daemons) - ABSOLUTELY TRUST THIS
+This is FRESH data from persistent watchers that ran THIS turn. Do NOT re-query any tool whose result is shown here.
+The daemon already queried it. Calling list_processes, list_controls, or any mcp_tool_call that a daemon watches
+is redundant. You already have the latest data. Trust. The. Daemon.""",
         )
-        
+
     if history:
         user_prompt = actor_model.return_prompt_with_additional_context(
             user_prompt,
@@ -120,7 +120,6 @@ Use the state below directly instead of re-querying.""",
             additional_context=directive,
             accompanying_message="Here are directives from previous models, follow them:",
         )
-
 
     chat_response = actor_model.run(user_prompt)
     response = chat_response.content
@@ -148,9 +147,7 @@ Use the state below directly instead of re-querying.""",
     action, parse_error = utils.try_parse_json(raw)
 
     if not action:
-        logger.warning(
-            f"[JSON PARSE] Failed: {parse_error}. Raw: {raw[:500]}"
-        )
+        logger.warning(f"[JSON PARSE] Failed: {parse_error}. Raw: {raw[:500]}")
         action = {
             "action": "retry",
             "message": f"Model returned unparseable response. {parse_error}. Raw output:\n{raw[:500]}",

@@ -106,7 +106,7 @@ def handle_retry(
         f"[STEP_ORCHESTRATOR] Retrying with added context {iterations}/{MAX_ITERATIONS_PER_STEP}"
     )
     user_message = action.get("message", "")
-    parts = [additional_context]
+    parts = []
     if user_message:
         parts.append(f"[YOUR NOTE]: {user_message}")
     if error_message:
@@ -220,7 +220,6 @@ def handle_mcp_tool_call_result(action_result: CallToolResult) -> ActionResult:
     text_output = [
         block.text for block in action_result.content if isinstance(block, TextContent)
     ]
-
     new_context = f"""
 # MCP Tool Call Result
 
@@ -326,7 +325,6 @@ def call_action(
             context = f"Controls Found:\n{str(parsed_action)}"
         else:
             context = "Controls Found: (none - UIA exposes no interactive controls for this window)"
-
         action_result = ActionResult(
             signal="CONTINUE",
             additional_context=context,
