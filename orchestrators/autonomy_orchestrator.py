@@ -9,29 +9,19 @@ from settings.settings import settings
 from result_types import ActionResult
 from mcp.types import CallToolResult, TextContent
 from interactions.skills.types import KodoSkillResult
+from interactions.direct_app_control.types import (
+    DirectAppProcessList,
+    DirectAppControlListResult,
+    DirectAppConnectionResult,
+    DirectAppInteractionResult,
+)
 
 from utils.runtime_globals import CURRENT_MODE
 
 import orchestrators.autonomy_helpers
 
 from utils import estimate_tokens
-
-DAC_ACTIONS = {
-    "list_processes",
-    "connect",
-    "list_controls",
-    "interact",
-    "expand",
-    "collapse",
-    "set_value",
-    "scroll",
-    "set_range_value",
-    "get_grid_item",
-    "minimize_window",
-    "maximize_window",
-    "restore_window",
-    "close_window",
-}
+from utils.globals import DAC_ACTIONS
 
 
 class AutonomyOrchestrator:
@@ -72,18 +62,11 @@ class AutonomyOrchestrator:
         elif action == "python":
             is_tool = True
         elif action in DAC_ACTIONS:
-            raw = ar.raw_result
-            if raw is not None:
-                error = getattr(raw, "error", None) or getattr(
-                    raw, "error_message", None
-                )
-                success = getattr(raw, "success", None)
-                if error or (success is not None and not success):
-                    is_dac_error = True
+            is_tool = True
         elif skill_orchestrator.can_handle(action):
             is_tool = True
 
-        if not is_tool and not is_dac_error:
+        if not is_tool:
             return None
 
         intent = step_result.get("history", "")
@@ -130,6 +113,22 @@ class AutonomyOrchestrator:
                 else:
                     parts.append("[ERROR]")
             return " | ".join(parts) if parts else None
+
+        if isinstance(raw, DirectAppProcessList):
+            count = len(raw.processes)
+            return f"Found {count} processes"
+
+        if isinstance(raw, DirectAppControlListResult):
+            if raw.error:
+                return f"controls error: {raw.error[:200]}"
+            count = len(raw.controls)
+            return f"Found {count} controls"
+
+        if isinstance(raw, DirectAppConnectionResult):
+            return f"{'Connected' if raw.success else 'Failed'}: {raw.message[:200]}"
+
+        if isinstance(raw, DirectAppInteractionResult):
+            return f"{'Success' if raw.success else 'Failed'}: {raw.message[:200]}"
 
         error = getattr(raw, "error", None) or getattr(raw, "error_message", None)
         if error:

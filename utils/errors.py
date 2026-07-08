@@ -1,4 +1,5 @@
 from utils import check_layer
+from utils.globals import DAC_ACTIONS
 
 ACTION_LAYERS: dict[str, str] = {
     "mcp_tool_call": "mcps",
@@ -16,21 +17,9 @@ ACTION_LAYERS: dict[str, str] = {
     "create_daemon": "daemons",
     "unregister_daemon": "daemons",
     "watchdog": "watchdog",
-    "list_processes": "direct_app_control",
-    "connect": "direct_app_control",
-    "list_controls": "direct_app_control",
-    "interact": "direct_app_control",
-    "expand": "direct_app_control",
-    "collapse": "direct_app_control",
-    "set_value": "direct_app_control",
-    "scroll": "direct_app_control",
-    "set_range_value": "direct_app_control",
-    "get_grid_item": "direct_app_control",
-    "minimize_window": "direct_app_control",
-    "maximize_window": "direct_app_control",
-    "restore_window": "direct_app_control",
-    "close_window": "direct_app_control",
 }
+# Derive DAC entries from the single source of truth
+ACTION_LAYERS.update({action: "direct_app_control" for action in DAC_ACTIONS})
 
 _VALID_ACTIONS = sorted(ACTION_LAYERS.keys()) + [
     "done",

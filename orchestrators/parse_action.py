@@ -28,6 +28,7 @@ from interactions.direct_app_control.direct_app_control_handler import (
 from interactions.daemons.daemons import daemon_provider
 
 from interactions.direct_app_control.types import *
+from utils.globals import DAC_ACTIONS
 from utils.errors import unknown_action_error
 
 
@@ -53,22 +54,7 @@ def parse_action(
 
     action_type = action["action"]
 
-    if check_layer("direct_app_control") and action_type in [
-        "list_processes",
-        "connect",
-        "list_controls",
-        "interact",
-        "expand",
-        "collapse",
-        "set_value",
-        "scroll",
-        "set_range_value",
-        "get_grid_item",
-        "minimize_window",
-        "maximize_window",
-        "restore_window",
-        "close_window",
-    ]:
+    if check_layer("direct_app_control") and action_type in DAC_ACTIONS:
         return direct_app_handler.handle_direct_action(action=action)
 
     match action["action"]:

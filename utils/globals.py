@@ -68,6 +68,23 @@ ALLOWED_CONTROL_TYPES = {
     "ProgressBar",
 }
 
+DAC_ACTIONS = frozenset({
+    "list_processes",
+    "connect",
+    "list_controls",
+    "interact",
+    "expand",
+    "collapse",
+    "set_value",
+    "scroll",
+    "set_range_value",
+    "get_grid_item",
+    "minimize_window",
+    "maximize_window",
+    "restore_window",
+    "close_window",
+})
+
 STRUCTURAL_TYPES = {"Pane", "Group", "Window", "Custom"}
 import platform
 
