@@ -1,6 +1,6 @@
 # Direct App Control (UIA)
 
-UIA-based control of running apps — no focus steal, no cursor movement. Try before `pc_actions`. App need not be focused or foregrounded to control.
+Controls Windows apps in the background via UI Automation. No focus stealing, no mouse/keyboard takeover, no visible cursor movement.
 
 **If already open:** never `open_app`/navigate. Go straight to `list_processes` → `connect` → act. Skip verification via screenshot/tree — DAC's control list is authoritative.
 
@@ -10,12 +10,12 @@ UIA-based control of running apps — no focus steal, no cursor movement. Try be
 
 ## Mandatory init sequence
 
-1. `list_processes` → pick `process_id`. Always first, never skipped.
-2. `connect` → attaches; auto-runs `list_controls` if `always_populate_connected_app_controls` (default true) — use that response, don't re-call.
-3. Act on `control_id` matching control `type`.
-4. Container reveals new children (e.g. `expand`) → re-`list_controls` for fresh IDs before touching them.
+1. `list_processes` → discover running top-level windows; pick the right `process_id`.
+2. `connect(process_id)` → attach to that process. Required before any control action.
+3. `list_controls` → get all interactive controls (returns `control_id`, `type`, `name`, `value`, `enabled`).
+4. Act using the `control_id` and matching action type.
 
-Re-`connect` to switch apps freely, no disconnect needed.
+Container reveals new children (e.g. `expand`) → re-`list_controls` for fresh IDs before touching them.
 
 ---
 
@@ -48,6 +48,8 @@ Re-`connect` to switch apps freely, no disconnect needed.
 - **Focus:** all patterns here are focus-neutral by spec; some browser `Invoke` providers may steal focus anyway — if seen, prefer `Select` on the ListItem, or `set_value` on the parent ComboBox. Genuine focus-required input → fall back to `pc_actions`.
 - **Infeasible-without-focus task:** don't force it through `pc_actions` as workaround here — toast the detail, `done` early.
 - Every response returns `{success, method, message}` — `method` reveals which UIA pattern fired; "no supported pattern" means wrong action for that control type (e.g. Slider wants `set_range_value`).
+
+> Direct App Control is in testing. Prefer it. If a task requires focus, do not complete it — emit a toast notification explaining why and call `done` prematurely.
 
 ---
 
