@@ -28,6 +28,7 @@ from interactions.direct_app_control.direct_app_control_handler import (
 from interactions.daemons.daemons import daemon_provider
 
 from interactions.direct_app_control.types import *
+from utils.errors import unknown_action_error
 
 
 def parse_action(
@@ -220,10 +221,12 @@ def parse_action(
             return result
 
         case _:
-            logger.warning(f"Unknown action: {action['action']}")
+            attempted = action["action"]
+            logger.warning(f"Unknown action: {attempted}")
+            error_message = unknown_action_error(attempted)
             return_command = "RETRY"
 
-    if not skill_orchestrator.can_handle(action.get("action")):
+    if not skill_orchestrator.can_handle(action.get("action")) and not error_message:
         error_message = f"The skill {action.get("action")} does not exist."
 
     return PrimitiveActionResult(

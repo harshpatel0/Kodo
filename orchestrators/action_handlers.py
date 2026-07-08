@@ -105,17 +105,19 @@ def handle_retry(
     logger.warning(
         f"[STEP_ORCHESTRATOR] Retrying with added context {iterations}/{MAX_ITERATIONS_PER_STEP}"
     )
-    try:
-        new_context = (
-            additional_context + f"{action['message']}" + "\t" + f"{error_message}"
+    user_message = action.get("message", "")
+    parts = [additional_context]
+    if user_message:
+        parts.append(f"[YOUR NOTE]: {user_message}")
+    if error_message:
+        parts.append(f"[ERROR]: {error_message}")
+    else:
+        parts.append(
+            "[ERROR]: The Action Parser could not parse your action. "
+            "Make sure you output exactly one JSON object per response "
+            "with the correct action name and arguments."
         )
-    except Exception:
-        new_context = (
-            additional_context
-            + "The Action Parser was not able to parse your action. Be more careful with the format in this run."
-            + "\n"
-            + f"{error_message}"
-        )
+    new_context = "\n".join(parts)
     return ActionResult(signal="CONTINUE", additional_context=new_context)
 
 
