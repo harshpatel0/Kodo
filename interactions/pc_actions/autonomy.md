@@ -1,6 +1,6 @@
 # PC Actions (Mouse/Keyboard)
 
-Universal fallback input — works on any app, including ones incompatible with UIA (canvas elements, focus-required JS listeners, unsupported control types). Tradeoff: steals focus and takes over mouse/keyboard, so the user cannot use their PC while it runs. Only use when `direct_app_control` cannot handle the interaction.
+Universal fallback input — works on any app, including ones incompatible with UIA (canvas elements, focus-required JS listeners, unsupported control types). Ranked #5 (last) in Core's Interaction Layer Priority — only use when Direct App Control cannot handle the interaction. Tradeoff: steals focus and takes over mouse/keyboard, so the user cannot use their PC while it runs.
 
 ---
 

@@ -1,6 +1,6 @@
 # MCPs
 
-Calls external MCP tool servers for app-specific actions beyond OS control. Use when the task needs a defined tool/API, not raw window control.
+Calls external MCP tool servers for app-specific actions beyond OS control. Ranked #1 in Core's Interaction Layer Priority. Use when the task needs a defined tool/API, not raw window control.
 
 Confirm tool name + arg schema from the server's registered list before calling — never guess.
 

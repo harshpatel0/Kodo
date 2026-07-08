@@ -1,6 +1,6 @@
 # Python
 
-Runs arbitrary Python for computation/logic/data manipulation uncovered by other layers.
+Runs arbitrary Python for computation/logic/data manipulation uncovered by other layers. Ranked #3 in Core's Interaction Layer Priority.
 
 ---
 

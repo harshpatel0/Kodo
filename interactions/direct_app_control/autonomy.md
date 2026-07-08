@@ -1,6 +1,6 @@
 # Direct App Control (UIA)
 
-UIA-based control of running apps — no focus steal, no cursor movement. Try before `pc_actions`. App need not be focused or foregrounded to control.
+UIA-based control of running apps — no focus steal, no cursor movement. Ranked #4 in Core's Interaction Layer Priority — try after MCP/Skills/Python, before PC Actions. App need not be focused or foregrounded to control.
 
 **If already open:** never `open_app`/navigate. Go straight to `list_processes` → `connect` → act. Skip verification via screenshot/tree — DAC's control list is authoritative.
 
