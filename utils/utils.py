@@ -63,29 +63,34 @@ def check_layer(
 def config_guard() -> None:
     from utils.logger import logger
 
-    active_provider = getattr(settings, "active_model_provider", "ollama")
-
-    provider_cfg = None
-    if hasattr(settings, "model_providers"):
-        provider_cfg = getattr(settings.model_providers, active_provider, None)
-
-    global_caching = getattr(settings, "caching", None)
-    global_caching_enabled = (
-        getattr(global_caching, "enabled", False) if global_caching else False
+    use_autonomy_mode = getattr(
+        getattr(settings, "orchestrator", None), "use_autonomy_mode", False
     )
+    driving_role = "autonomy_actor" if use_autonomy_mode else "actor"
+
+    role_cfg = getattr(getattr(settings, "models", None), driving_role, None)
+    role_provider_name = getattr(role_cfg, "provider", None) if role_cfg else None
 
     use_caching = False
-    if provider_cfg:
-        use_caching = getattr(provider_cfg, "use_caching", global_caching_enabled)
+    if role_provider_name and hasattr(settings, "model_providers"):
+        provider_cfg = getattr(settings.model_providers, role_provider_name, None)
+        use_caching = (
+            getattr(provider_cfg, "use_caching", False) if provider_cfg else False
+        )
     else:
-        use_caching = global_caching_enabled
+        logger.warning(
+            f"Config Guard: could not resolve a provider for models.{driving_role} "
+            "(missing 'provider' field?). Treating caching as disabled for the "
+            "diffing safety check below."
+        )
 
     if not use_caching:
         if hasattr(settings, "context_provider") and getattr(
             settings.context_provider, "use_diffing", False
         ):
             logger.warning(
-                "Config Guard: Caching is disabled, but context_provider.use_diffing was True. "
+                f"Config Guard: caching is disabled for models.{driving_role} "
+                f"(provider: {role_provider_name}), but context_provider.use_diffing was True. "
                 "Automatically setting context_provider.use_diffing to False to prevent stateless coordinate loss."
             )
             settings.context_provider.use_diffing = False
@@ -94,17 +99,19 @@ def config_guard() -> None:
             settings.direct_app_control, "use_diffing", False
         ):
             logger.warning(
-                "Config Guard: Caching is disabled, but direct_app_control.use_diffing was True. "
+                f"Config Guard: caching is disabled for models.{driving_role} "
+                f"(provider: {role_provider_name}), but direct_app_control.use_diffing was True. "
                 "Automatically setting direct_app_control.use_diffing to False to prevent stateless coordinate loss."
             )
             settings.direct_app_control.use_diffing = False
 
-        enabled_layers = 0
-
+    enabled_layers = 0
     for layer in AVAILABLE_INTERACTION_LAYERS:
         if check_layer(layer):
             enabled_layers += 1
 
     if enabled_layers == 0:
-        print("At least one interaction layer needs to be enabled for Kodo to work")
+        print(
+            "At least one interaction layer needs to be enabled for Kodo to work",
+        )
         exit(1)
