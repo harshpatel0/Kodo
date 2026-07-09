@@ -2,7 +2,19 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
+from utils.runtime_globals import CURRENT_MODE
+
 load_dotenv()
+
+
+def determine_caching(setting_state: bool) -> bool:
+    """Disable caching if the mode is not ACTOR or AUTONOMY, as cache invalidation
+    penalties will apply if planner or skill_installation mode prompts are cached
+    for some providers.
+    """
+    if setting_state and CURRENT_MODE in ("ACTOR", "AUTONOMY"):
+        return True
+    return False
 
 
 @dataclass

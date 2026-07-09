@@ -3,9 +3,8 @@ import time
 
 from openai import OpenAI
 
-from .base import ModelProvider, ChatMessage, ChatResponse
+from .base import ModelProvider, ChatMessage, ChatResponse, determine_caching
 from utils.logger import logger
-from utils.runtime_globals import CURRENT_MODE
 
 
 class OpenAICompatibleProvider(ModelProvider):
@@ -33,7 +32,7 @@ class OpenAICompatibleProvider(ModelProvider):
         if base_url:
             kwargs["base_url"] = base_url
         self._client = OpenAI(**kwargs)
-        self.use_caching = use_caching and CURRENT_MODE in ("ACTOR", "AUTONOMY")
+        self.use_caching = determine_caching(use_caching)
 
     def chat(
         self,

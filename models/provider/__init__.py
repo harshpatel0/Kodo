@@ -21,21 +21,24 @@ from settings.settings import settings
 _PROVIDER_CACHE: dict[str, ModelProvider] = {}
 
 
-def get_provider(model_config=None):
+def get_provider(model_config):
     """Get or create a ModelProvider instance.
 
     Args:
-        model_config: A SimpleNamespace with at least a `provider` field
-                      (e.g. settings.models.actor). If None, uses
-                      settings.active_model_provider.
+        model_config: A SimpleNamespace with a required `provider` field
+                      (e.g. settings.models.actor).
 
     Returns:
         A ModelProvider instance (OllamaProvider, AnthropicProvider, or GoogleProvider).
+
+    Raises:
+        ValueError: if model_config is missing or has no `provider` set
     """
-    if model_config is None:
-        provider_name = getattr(settings, "active_model_provider", "ollama")
-    else:
-        provider_name = getattr(model_config, "provider", None) or getattr(settings, "active_model_provider", "ollama")
+    provider_name = getattr(model_config, "provider", None) if model_config else None
+    if not provider_name:
+        raise ValueError(
+            "get_provider() requires model_config.provider to be set explicitly "
+        )
 
     factory_map = {
         "ollama": _create_ollama_provider,
@@ -60,24 +63,12 @@ def clear_provider_cache():
     _PROVIDER_CACHE.clear()
 
 
-def _get_global_caching():
-    return getattr(settings, "caching", None)
-
-
 def _get_use_caching(provider_cfg) -> bool:
-    global_cfg = _get_global_caching()
-    return getattr(
-        provider_cfg, "use_caching",
-        getattr(global_cfg, "enabled", False) if global_cfg else False,
-    )
+    return getattr(provider_cfg, "use_caching", False)
 
 
 def _get_cache_ttl(provider_cfg) -> int:
-    global_cfg = _get_global_caching()
-    return getattr(
-        provider_cfg, "cache_ttl_seconds",
-        getattr(global_cfg, "ttl_seconds", 300) if global_cfg else 300,
-    )
+    return getattr(provider_cfg, "cache_ttl_seconds", 300)
 
 
 def _create_ollama_provider() -> OllamaProvider:

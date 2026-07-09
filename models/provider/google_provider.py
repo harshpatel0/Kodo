@@ -3,20 +3,9 @@ import base64
 import time
 import hashlib
 
-from .base import ModelProvider, ChatMessage, ChatResponse
+from .base import ModelProvider, ChatMessage, ChatResponse, determine_caching
 from utils.logger import logger
 from settings.settings import settings
-
-from utils.runtime_globals import CURRENT_MODE
-
-
-def determine_caching(setting_state: bool):
-    """Disable Caching if the mode is not ACTOR or AUTONOMY as cache invalidation penalties will apply
-    if planner or skill_installation mode prompts are cached
-    """
-    if setting_state and CURRENT_MODE in ("ACTOR", "AUTONOMY"):
-        return True
-    return False
 
 
 def _extract_status_code(err: Exception) -> int | None:
@@ -158,8 +147,6 @@ class GoogleProvider(ModelProvider):
 
         if cached_name:
             config_kwargs["cached_content"] = cached_name
-            if history:
-                history[:] = history[1:]
         elif system_prompt:
             config_kwargs["system_instruction"] = system_prompt
 

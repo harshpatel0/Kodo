@@ -1,22 +1,11 @@
 import os
 
-from .base import ModelProvider, ChatMessage, ChatResponse
+from .base import ModelProvider, ChatMessage, ChatResponse, determine_caching
 from utils.logger import logger
 import anthropic as _anthropic
 from settings.settings import settings
 
-from utils.runtime_globals import CURRENT_MODE
-
 import time
-
-
-def determine_caching(setting_state: bool):
-    """Disable Caching if the mode is not ACTOR or AUTONOMY as cache invalidation penalties will apply
-    if planner or skill_installation mode prompts are cached
-    """
-    if setting_state and CURRENT_MODE in ("ACTOR", "AUTONOMY"):
-        return True
-    return False
 
 
 class AnthropicProvider(ModelProvider):
@@ -111,7 +100,7 @@ class AnthropicProvider(ModelProvider):
         if kwargs.get("thinking", False):
             call_kwargs["thinking"] = {"type": "adaptive"}
             call_kwargs["temperature"] = (
-                1.0  # Enabling Thinking forces temperature to 1.0
+                1.0  # Enabling Thinking forces temperature to 1.0 and max output tokens to 16384
             )
             call_kwargs["max_tokens"] = 16384
         try:
