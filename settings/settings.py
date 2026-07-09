@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from settings.default import default_settings
+from utils.logger import logger
 
 
 class Settings:
@@ -41,7 +42,7 @@ class Settings:
         missing_keys = [key for key in default_settings if key not in data]
 
         if missing_keys:
-            print(
+            logger.warning(
                 f"[Settings] Warning: settings.json is missing keys: {missing_keys}. "
                 "Filling in from defaults."
             )
