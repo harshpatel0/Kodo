@@ -9,6 +9,7 @@ import sys
 import bootstrapper
 
 from utils import check_layer
+from utils import toaster
 
 
 from utils.globals import API_BIND_TO_ALL_IPS, API_PORT
@@ -52,6 +53,11 @@ if __name__ == "__main__":
         setup.run_setup_sequence()
 
     _run_under_venv()
+
+    toaster.update(
+        "Kodo Toast Notifications",
+        "You can use Toast Notifications to monitor Kodo as it progresses in your Windows Action Center",
+    )
 
     bootstrapper.run_config_guard()
     if check_layer("mcps"):
