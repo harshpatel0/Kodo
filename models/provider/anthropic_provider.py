@@ -126,10 +126,15 @@ class AnthropicProvider(ModelProvider):
 
         elapsed_time = int((time.monotonic() - timer_start) * 1000)
 
+        cache_read = getattr(response.usage, "cache_read_input_tokens", 0) or 0
+        cache_write = getattr(response.usage, "cache_creation_input_tokens", 0) or 0
+
         return ChatResponse(
             content=content.strip(),
             thinking=thinking,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
             total_duration_ms=elapsed_time,
+            cache_read_tokens=cache_read,
+            cache_write_tokens=cache_write,
         )

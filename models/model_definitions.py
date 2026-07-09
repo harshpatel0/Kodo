@@ -74,7 +74,8 @@ class SkillInstallationMode:
             ChatMessage(role="user", content=user_prompt),
         ]
 
-        logger.info("Resolving skill issues")
+        from utils.loading_text import get_loading_text
+        logger.info(get_loading_text())
 
         cfg = settings.models.skill_installation
         provider = get_provider(cfg)

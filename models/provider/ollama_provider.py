@@ -4,7 +4,6 @@ import random
 
 from .base import ModelProvider, ChatMessage, ChatResponse
 from utils.logger import logger
-from utils.loading_text import get_loading_text
 
 
 class OllamaProvider(ModelProvider):
@@ -42,7 +41,6 @@ class OllamaProvider(ModelProvider):
         last_error = None
         for attempt in range(3):
             try:
-                logger.info(get_loading_text())
                 response = self.client.chat(
                     model=model,
                     messages=ollama_messages,

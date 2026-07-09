@@ -2,6 +2,7 @@ from models.model_definitions import ActorModel
 
 import utils.utils as utils
 from utils.logger import logger
+from utils.loading_text import get_loading_text
 from utils.globals import (
     ACTOR_MODEL_ENABLE_DEBUG_OUTPUT_PROMPTS_AND_RESULT_TO_FILE,
     ACTOR_MODEL_DEBUG_USER_PROMPT_CONSTRUCTION_TO_FILE,
@@ -125,11 +126,14 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
             accompanying_message="Here are directives from previous models, follow them:",
         )
 
+    logger.info(get_loading_text())
     chat_response = actor_model.run(user_prompt)
     response = chat_response.content
 
     tokens_in = chat_response.input_tokens
     tokens_out = chat_response.output_tokens
+    cache_read = chat_response.cache_read_tokens
+    cache_write = chat_response.cache_write_tokens
     elapsed_s = chat_response.total_duration_ms / 1000
     token_rate = round((tokens_in + tokens_out) / elapsed_s, 1) if elapsed_s > 0 else 0
 
@@ -141,10 +145,12 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
             "model": model_name,
             "provider": model_provider,
             "mode": "autonomy" if settings.orchestrator.use_autonomy_mode else "actor",
+            "cache_read_tokens": cache_read,
+            "cache_write_tokens": cache_write,
         }
     )
 
-    logger.info(f"[LLM RAW] {response}")
+    logger.debug(f"[LLM RAW] {response}")
 
     raw = utils.strip_markdown_json(response).strip()
 
@@ -165,9 +171,14 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
     web_emitter.action(action)
     web_emitter.thinking(chat_response.thinking if chat_response.thinking else "")
 
+    cache_str = ""
+    if cache_read:
+        cache_str += f" | Cache read: {cache_read}"
+    if cache_write:
+        cache_str += f" | Cache write: {cache_write}"
     logger.info(
-        f"Tokens Used: Input: {tokens_in} tokens, Output: {tokens_out} tokens. "
-        f"Took {round(elapsed_s)} seconds. Token rate: {token_rate} tok/s"
+        f"Tokens Used: Input: {tokens_in} tokens, Output: {tokens_out} tokens."
+        f" Took {round(elapsed_s)} seconds. Token rate: {token_rate} tok/s{cache_str}"
     )
 
     logger.info(f"Thinking: \n\t{chat_response.thinking}")

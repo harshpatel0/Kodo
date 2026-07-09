@@ -217,10 +217,17 @@ class GoogleProvider(ModelProvider):
 
         elapsed_time = int((time.monotonic() - timer_start) * 1000)
 
+        cached_tokens = 0
+        try:
+            cached_tokens = response.usage_metadata.cached_content_token_count or 0
+        except Exception:
+            pass
+
         return ChatResponse(
             content=text,
             thinking=thinking if thinking != "" else None,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_duration_ms=elapsed_time,
+            cache_read_tokens=cached_tokens,
         )
