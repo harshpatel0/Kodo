@@ -7,7 +7,9 @@ import getpass
 REQUEST_PERMISSION_FOR_DANGEROUS_ACTIONS = True
 
 
-def parse_path(path: str) -> str:
+def parse_path(path: str | None) -> str | None:
+    if not path:
+        return path
     system_username = getpass.getuser()
     if "%USERPROFILE%" in path:
         path = path.replace("%USERPROFILE%\\", f"C:\\Users\\{system_username}")
@@ -135,7 +137,12 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    file_path = args.get("path")
+    file_path = args.get("file_path") or args.get("path")
+
+    if not file_path:
+        print("No file path provided. Accepted keys: 'file_path' or 'path'.",
+              file=sys.__stderr__)
+        sys.exit(1)
 
     file_path = parse_path(file_path)
     content = args.get("content", None)
