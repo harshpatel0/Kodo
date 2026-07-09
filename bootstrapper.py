@@ -50,3 +50,9 @@ def check_layers():
     if enabled_layers == 0:
         print("At least one interaction layer needs to be enabled for Kodo to work")
         exit(1)
+
+
+def run_config_guard():
+    from utils import config_guard
+    config_guard()
+

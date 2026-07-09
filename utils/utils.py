@@ -2,6 +2,8 @@ import re
 import json
 import tiktoken
 
+from utils.globals import AVAILABLE_INTERACTION_LAYERS
+
 
 def strip_markdown_json(raw: str) -> str:
     """Extract JSON from markdown code fences, or return raw string stripped."""
@@ -56,3 +58,53 @@ def check_layer(
         return getattr(settings.interactions, layer, True)
     except AttributeError:
         return True
+
+
+def config_guard() -> None:
+    from utils.logger import logger
+
+    active_provider = getattr(settings, "active_model_provider", "ollama")
+
+    provider_cfg = None
+    if hasattr(settings, "model_providers"):
+        provider_cfg = getattr(settings.model_providers, active_provider, None)
+
+    global_caching = getattr(settings, "caching", None)
+    global_caching_enabled = (
+        getattr(global_caching, "enabled", False) if global_caching else False
+    )
+
+    use_caching = False
+    if provider_cfg:
+        use_caching = getattr(provider_cfg, "use_caching", global_caching_enabled)
+    else:
+        use_caching = global_caching_enabled
+
+    if not use_caching:
+        if hasattr(settings, "context_provider") and getattr(
+            settings.context_provider, "use_diffing", False
+        ):
+            logger.warning(
+                "Config Guard: Caching is disabled, but context_provider.use_diffing was True. "
+                "Automatically setting context_provider.use_diffing to False to prevent stateless coordinate loss."
+            )
+            settings.context_provider.use_diffing = False
+
+        if hasattr(settings, "direct_app_control") and getattr(
+            settings.direct_app_control, "use_diffing", False
+        ):
+            logger.warning(
+                "Config Guard: Caching is disabled, but direct_app_control.use_diffing was True. "
+                "Automatically setting direct_app_control.use_diffing to False to prevent stateless coordinate loss."
+            )
+            settings.direct_app_control.use_diffing = False
+
+        enabled_layers = 0
+
+    for layer in AVAILABLE_INTERACTION_LAYERS:
+        if check_layer(layer):
+            enabled_layers += 1
+
+    if enabled_layers == 0:
+        print("At least one interaction layer needs to be enabled for Kodo to work")
+        exit(1)
