@@ -7,7 +7,7 @@ from models.model_definitions import PlannerModel, SkillInstallationMode
 from interactions.skills.skill_orchestrator import skill_orchestrator
 import utils.utils as utils
 from utils.logger import logger
-from utils.loading_text import get_loading_text
+from utils.loading_text import show_loading_text
 
 from settings.settings import settings
 
@@ -25,7 +25,7 @@ def make_plan(task: str):
     logger.debug(f"Planner skills loaded: {planner_skills is not None}")
     logger.debug(f"Actor skills loaded: {actor_skills is not None}")
 
-    logger.info(get_loading_text())
+    show_loading_text()
     chat_response = planner_model.run(task=task, skills=planner_skills)
     response = chat_response.content
 

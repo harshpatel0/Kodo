@@ -2,7 +2,7 @@ from models.model_definitions import ActorModel
 
 import utils.utils as utils
 from utils.logger import logger
-from utils.loading_text import get_loading_text
+from utils.loading_text import show_loading_text
 from utils.globals import (
     ACTOR_MODEL_ENABLE_DEBUG_OUTPUT_PROMPTS_AND_RESULT_TO_FILE,
     ACTOR_MODEL_DEBUG_USER_PROMPT_CONSTRUCTION_TO_FILE,
@@ -109,6 +109,7 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
         )
 
     from models.provider import get_provider
+
     provider = get_provider(cfg)
     use_caching = getattr(provider, "use_caching", False)
 
@@ -126,7 +127,8 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
             accompanying_message="Here are directives from previous models, follow them:",
         )
 
-    logger.info(get_loading_text())
+    show_loading_text()
+
     chat_response = actor_model.run(user_prompt)
     response = chat_response.content
 

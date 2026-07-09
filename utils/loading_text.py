@@ -54,3 +54,12 @@ def get_loading_text():
         loading_text = loading_text + "..."
 
     return loading_text
+
+
+def show_loading_text():
+    loading_text = get_loading_text()
+    from utils import toaster
+    from utils.logger import logger
+
+    toaster.update("Kodo Loading", loading_text)
+    logger.info(loading_text)
