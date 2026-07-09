@@ -1,8 +1,6 @@
 default_settings = {
     "active_model_provider": "ollama",
     "caching": {
-        "enabled": False,
-        "ttl_seconds": 300,
         "log_stats": False,
     },
     "model_providers": {
