@@ -60,6 +60,9 @@ def check_layer(
         return True
 
 
+from utils.toasts.toast import toaster
+
+
 def config_guard() -> None:
     from utils.logger import logger
 
@@ -95,6 +98,11 @@ def config_guard() -> None:
             )
             settings.context_provider.use_diffing = False
 
+            toaster.update(
+                "Mitigated Configuration Violation",
+                f"Caching is disabled for {driving_role.title()}, so diffing was disabled for context provider. This run may use more tokens",
+            )
+
         if hasattr(settings, "direct_app_control") and getattr(
             settings.direct_app_control, "use_diffing", False
         ):
@@ -105,6 +113,11 @@ def config_guard() -> None:
             )
             settings.direct_app_control.use_diffing = False
 
+            toaster.update(
+                "Mitigated Configuration Violation",
+                f"Caching is disabled for {driving_role.title()}, so diffing was disabled for DAC Context Provider. This run may use more tokens",
+            )
+
     enabled_layers = 0
     for layer in AVAILABLE_INTERACTION_LAYERS:
         if check_layer(layer):
@@ -113,5 +126,9 @@ def config_guard() -> None:
     if enabled_layers == 0:
         print(
             "At least one interaction layer needs to be enabled for Kodo to work",
+        )
+        toaster.update(
+            "Failed to start Kodo",
+            f"At least one interaction layer needs to be enabled for Kodo to work",
         )
         exit(1)

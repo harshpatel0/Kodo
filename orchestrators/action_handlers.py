@@ -38,6 +38,9 @@ def handle_proceed(step_count: int, iterations: int, in_autonomy: bool) -> Actio
 
 def handle_done() -> ActionResult:
     logger.info("The actor model claims the task is done, hard exiting...")
+    from utils import toaster
+
+    toaster.update(title="Task Completed", message="Kodo claims the task is complete")
     return ActionResult(signal="BREAK", hard_exit=True)
 
 

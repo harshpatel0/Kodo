@@ -53,8 +53,7 @@ if __name__ == "__main__":
 
     _run_under_venv()
 
-    bootstrapper.check_layers()
-
+    bootstrapper.run_config_guard()
     if check_layer("mcps"):
         bootstrapper.setup_mcps()
 

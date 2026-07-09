@@ -23,6 +23,8 @@ import orchestrators.autonomy_helpers
 from utils import estimate_tokens
 from utils.globals import DAC_ACTIONS
 
+from utils import toaster
+
 
 class AutonomyOrchestrator:
     def __init__(self, task):
@@ -188,6 +190,8 @@ class AutonomyOrchestrator:
 
     def run_skill_installation_mode(self):
         CURRENT_MODE = "SKILL_INSTALLATION"
+
+        toaster.update("Installing Skills for the task", "")
         actor_skills, installed_skills = self.skill_installation_mode.run(self.task)
 
         self.skills = actor_skills
@@ -195,11 +199,24 @@ class AutonomyOrchestrator:
             self.installed_skills = list(installed_skills)
         elif installed_skills is None:
             self.installed_skills = []
+            toaster.update("No skills installed for the task", "")
         else:
             self.installed_skills = [installed_skills]
 
+            friendly_skill_names = ""
+
+            for skill in installed_skills:
+                skill_name = skill.split("-")
+                skill_str = " ".join(skill_name)
+
+                friendly_skill_names += skill_str + ""
+
+            toaster.update("Installed the following skills:", friendly_skill_names)
+
     def run(self):
         CURRENT_MODE = "AUTONOMY"
+        toaster.update("Starting Run", "")
+
         directive_section = (
             f"\n## Directive\n{self.directive}\n" if str(self.directive).strip() else ""
         )
@@ -223,6 +240,10 @@ History (truncated):
 """)
 
             if max_iter > 0 and self.iterations >= max_iter:
+                toaster.update(
+                    "Out of iterations",
+                    "Kodo was not able to complete the task within the given iteration budget",
+                )
                 self.hard_exit = True
 
             last_action_info = ""
@@ -304,21 +325,19 @@ History (truncated):
                     self.additional_context = "\n".join(contexts)
                 for d in directives:
                     self.directive.append(d)
+
                 combined_history = " | ".join(history_parts) if history_parts else ""
+
                 if history_parts:
                     self.history.append(combined_history)
                 if (
                     settings.orchestrator.autonomy_orchestrator.toast_notify_history
                     and combined_history
                 ):
-                    from winotify import Notification
-
-                    toast = Notification(
-                        app_id="Kodo",
+                    toaster.update(
                         title="Kodo Step Result (Batch)",
-                        msg=combined_history,
+                        message=combined_history,
                     )
-                    toast.show()
 
             elif self.step_result.get("install_skills"):
                 self._handle_skill_installation(self.step_result["skills"])
@@ -352,11 +371,9 @@ History (truncated):
                         self.history.append(model_provided_history)
 
                 if settings.orchestrator.autonomy_orchestrator.toast_notify_history:
-                    from winotify import Notification
-
-                    toast = Notification(
-                        app_id="Kodo",
+                    toaster.update(
                         title="Kodo Step Result",
-                        msg=deterministic or self.step_result.get("history", "None"),
+                        message=self.step_result.get("history", "None"),
                     )
-                    toast.show()
+
+        toaster.teardown()

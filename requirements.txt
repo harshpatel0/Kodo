@@ -16,3 +16,4 @@ google-genai
 pillow
 tiktoken
 winotify
+windows-toasts
