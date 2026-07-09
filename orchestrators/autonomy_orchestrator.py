@@ -191,7 +191,10 @@ class AutonomyOrchestrator:
     def run_skill_installation_mode(self):
         CURRENT_MODE = "SKILL_INSTALLATION"
 
-        toaster.update("Installing Skills for the task", "")
+        toaster.update(
+            "Resolving a skill issue",
+            "Determining and installing necessary skills for the task",
+        )
         actor_skills, installed_skills = self.skill_installation_mode.run(self.task)
 
         self.skills = actor_skills
