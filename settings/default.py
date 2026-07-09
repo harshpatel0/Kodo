@@ -85,12 +85,12 @@ default_settings = {
         "take_full_screen_screenshot": True,
         "screenshot_quality_percentage": 80,
         "provide_uia_tree": True,
-        "use_diffing": True,
+        "use_diffing": False,
     },
     "skills": {
         "skill_timeout": 0,
     },
-    "direct_app_control": {"always_populate_connected_app_controls": True, "use_diffing": True},
+    "direct_app_control": {"always_populate_connected_app_controls": True, "use_diffing": False},
     "web_ui": {
         "expose_web_ui_to_all_devices_on_the_network": False,
         "desktop_streaming_quality_percentage": 85,

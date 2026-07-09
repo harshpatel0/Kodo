@@ -2,6 +2,7 @@ from settings.settings import settings
 from orchestrators.autonomy_orchestrator import AutonomyOrchestrator
 from orchestrators.step_orchestrator import StepOrchestrator
 import models.planner_model
+from models.actor_model import actor_model
 
 
 def run_externally(task: str, mode_override: str | None = None):

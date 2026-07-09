@@ -183,6 +183,7 @@ Treat skill actions as first-class actions alongside the standard ones above.
 class ActorModel:
     def __init__(self):
         self.system_prompt = ""
+        self.conversation_history: list[ChatMessage] = []
 
     def build_system_prompt_with_skills(self, skills=None, task=None):
         active_system_prompt = _get_actor_system_prompt()
@@ -258,6 +259,9 @@ Taskbar Elements
 
     def run(self, user_prompt):
         cfg = _get_actor_config()
+        provider = get_provider(cfg)
+        use_caching = getattr(provider, "use_caching", False)
+
         attach_screenshot = getattr(cfg, "attach_screenshot_of_active_window", False)
 
         user_message = ChatMessage(role="user", content=user_prompt)
@@ -269,12 +273,18 @@ Taskbar Elements
                 )
             ]
 
-        messages = [
-            ChatMessage(role="system", content=self.system_prompt),
-            user_message,
-        ]
-
-        provider = get_provider(cfg)
+        if use_caching:
+            if not self.conversation_history:
+                self.conversation_history = [
+                    ChatMessage(role="system", content=self.system_prompt)
+                ]
+            self.conversation_history.append(user_message)
+            messages = list(self.conversation_history)
+        else:
+            messages = [
+                ChatMessage(role="system", content=self.system_prompt),
+                user_message,
+            ]
 
         response = provider.chat(
             messages=messages,
@@ -284,5 +294,10 @@ Taskbar Elements
             output_format="json",
             thinking=getattr(cfg, "thinking", False),
         )
+
+        if use_caching:
+            self.conversation_history.append(
+                ChatMessage(role="assistant", content=response.content)
+            )
 
         return response

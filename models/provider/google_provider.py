@@ -5,7 +5,6 @@ import hashlib
 
 from .base import ModelProvider, ChatMessage, ChatResponse
 from utils.logger import logger
-from models.provider.utils.cache_control import CacheControl
 from settings.settings import settings
 
 from utils.runtime_globals import CURRENT_MODE
@@ -67,7 +66,6 @@ class GoogleProvider(ModelProvider):
         self.use_caching = determine_caching(use_caching)
         self._cache_ttl = cache_ttl_seconds
         self._cached_contents: dict[str, tuple[str, float]] = {}
-        self.bank = CacheControl(system_prompt="")
 
         if self.use_caching:
             self._clear_existing_caches()
@@ -160,6 +158,8 @@ class GoogleProvider(ModelProvider):
 
         if cached_name:
             config_kwargs["cached_content"] = cached_name
+            if history:
+                history[:] = history[1:]
         elif system_prompt:
             config_kwargs["system_instruction"] = system_prompt
 
@@ -171,10 +171,6 @@ class GoogleProvider(ModelProvider):
         config = types.GenerateContentConfig(**config_kwargs)
 
         last_error = None
-        for c in history:
-            for p in c.parts:
-                if getattr(p, "text", None):
-                    self.bank.append(p.text)
         for attempt in range(3):
             try:
                 response = self._client.models.generate_content(
@@ -233,7 +229,6 @@ class GoogleProvider(ModelProvider):
             logger.debug(f"[GoogleProvider] Reasoning:\n{thinking}")
 
         elapsed_time = int((time.monotonic() - timer_start) * 1000)
-        self.bank.append(text)
 
         return ChatResponse(
             content=text,

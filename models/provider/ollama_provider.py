@@ -14,6 +14,7 @@ class OllamaProvider(ModelProvider):
         self.server_url = server_url
         self.timeout = timeout
         self.client = ollama.Client(host=server_url)
+        self.use_caching = False
 
     def chat(
         self,

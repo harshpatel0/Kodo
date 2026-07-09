@@ -23,6 +23,7 @@ class ChatResponse:
 
 
 class ModelProvider(ABC):
+    use_caching: bool = False
 
     @abstractmethod
     def chat(

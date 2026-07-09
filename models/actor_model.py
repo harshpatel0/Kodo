@@ -107,7 +107,11 @@ The daemon already queried it. Calling list_processes, list_controls, or any mcp
 is redundant. You already have the latest data. Trust. The. Daemon.""",
         )
 
-    if history:
+    from models.provider import get_provider
+    provider = get_provider(cfg)
+    use_caching = getattr(provider, "use_caching", False)
+
+    if history and not use_caching:
         user_prompt = actor_model.return_prompt_with_additional_context(
             user_prompt,
             additional_context=history,
