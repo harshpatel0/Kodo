@@ -1,8 +1,6 @@
 import logging
 import sys
 
-from settings.settings import settings
-
 
 class SafeConsoleHandler(logging.StreamHandler):
     def emit(self, record):
@@ -31,7 +29,14 @@ def setup_shared_logger(name, log_file="kodo.log"):
     if not logger.handlers:
         logger.addHandler(console_handler)
 
-        if getattr(settings, "log_to_file", True):
+        try:
+            from settings.settings import settings
+
+            log_to_file = getattr(settings, "log_to_file", True)
+        except (ImportError, AttributeError):
+            log_to_file = True
+
+        if log_to_file:
             file_handler = logging.FileHandler(log_file, mode="w", encoding="utf-8")
             file_handler.setFormatter(formatter)
             file_handler.setLevel(logging.DEBUG)
