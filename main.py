@@ -54,14 +54,14 @@ if __name__ == "__main__":
 
     _run_under_venv()
 
+    bootstrapper.run_config_guard()
+    if check_layer("mcps"):
+        bootstrapper.setup_mcps()
+
     toaster.update(
         "Kodo Toast Notifications",
         "You can use Toast Notifications to monitor Kodo as it progresses in your Windows Action Center",
     )
-
-    bootstrapper.run_config_guard()
-    if check_layer("mcps"):
-        bootstrapper.setup_mcps()
 
     if "-t" in sys.argv:
         arguments = sys.argv.copy()
