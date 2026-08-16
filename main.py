@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     toaster.update(
         "Kodo Toast Notifications",
-        "You can use Toast Notifications to monitor Kodo as it progresses in your Windows Action Center",
+        "Kodo will post its status throughout all runs in your Windows Action Center",
     )
 
     if "-t" in sys.argv:
