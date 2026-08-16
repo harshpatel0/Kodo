@@ -1,5 +1,10 @@
 import threading
-from windows_toasts import InteractableWindowsToaster, Toast
+from windows_toasts import (
+    InteractableWindowsToaster,
+    Toast,
+    ToastScenario,
+    ToastDuration,
+)
 
 
 class Toaster:
@@ -8,6 +13,10 @@ class Toaster:
         self.toast = Toast()
         self.toast.tag = "kodo_runtime"
         self.toast.group = "agent_status"
+
+        self.toast.scenario = ToastScenario.Alarm
+        self.toast.duration = ToastDuration.Long
+
         self.has_spawned = False
         self._lock = threading.Lock()
 
