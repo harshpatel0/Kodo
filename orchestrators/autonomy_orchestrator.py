@@ -1,7 +1,9 @@
 import time
 import models.actor_model as actor_model
+from models.actor_model import ActorModel
 from context_provider import ContextProvider
 from orchestrators.action_handlers import call_action
+from orchestrators.autonomy_helpers import Directive, History
 from interactions.skills.skill_orchestrator import skill_orchestrator
 from models.model_definitions import SkillInstallationMode
 from utils import logger
@@ -24,6 +26,7 @@ from utils import estimate_tokens
 from utils.globals import DAC_ACTIONS
 
 from utils import toaster
+from server.log_stream import web_emitter
 
 
 class AutonomyOrchestrator:
@@ -38,8 +41,9 @@ class AutonomyOrchestrator:
         self.skills = ""
 
         self.punishment_tally = ""
-        self.history = orchestrators.autonomy_helpers.history_manager
-        self.directive = orchestrators.autonomy_helpers.directive_manager
+        self.actor_model = ActorModel()
+        self.history = History()
+        self.directive = Directive()
         self.runtime_skills = None
         self.last_action = None
 
@@ -270,6 +274,7 @@ History (truncated):
                     history=str(self.history),
                     available_skill_actions=self.skill_orchestrator.list_actions(),
                     directive=str(self.directive),
+                    actor=self.actor_model,
                 )
             except KeyboardInterrupt:
                 exit(1)
@@ -333,6 +338,7 @@ History (truncated):
 
                 if history_parts:
                     self.history.append(combined_history)
+                    web_emitter.history(list(self.history.history))
                 if (
                     settings.orchestrator.autonomy_orchestrator.toast_notify_history
                     and combined_history
@@ -345,6 +351,7 @@ History (truncated):
             elif self.step_result.get("install_skills"):
                 self._handle_skill_installation(self.step_result["skills"])
                 self.history.append(self.step_result.get("history", "None"))
+                web_emitter.history(list(self.history.history))
 
             else:
                 ar = call_action(
@@ -372,6 +379,7 @@ History (truncated):
                     else:
                         model_provided_history = self.step_result.get("history", "None")
                         self.history.append(model_provided_history)
+                web_emitter.history(list(self.history.history))
 
                 if settings.orchestrator.autonomy_orchestrator.toast_notify_history:
                     toaster.update(
