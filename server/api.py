@@ -21,6 +21,7 @@ from fastapi import (
 from fastapi import status as ws_status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.websockets import WebSocketState
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -57,6 +58,11 @@ app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 pc_screen = mss()
 
+_TASK_LOCK = threading.Lock()
+
+_RUN_STATE = {"running": False, "task": None}
+_subscribers: set = set()
+
 
 @app.get("/")
 def serve_app():
@@ -72,6 +78,21 @@ def get_settings():
 def post_settings(settings_json: dict):
     settings.load_custom_settings(data=settings_json)
     return {"success": True, "detail": "Loaded custom settings"}
+
+
+@app.get("/run/status")
+async def run_status():
+    return dict(_RUN_STATE)
+
+
+async def _broadcast(record: dict):
+    """Fan a record out to every connected WebSocket."""
+    text = json.dumps(record)
+    for ws in list(_subscribers):
+        try:
+            await ws.send_text(text)
+        except Exception:
+            _subscribers.discard(ws)
 
 
 def _kill_thread(thread_id: int):
@@ -93,9 +114,14 @@ def _kill_thread(thread_id: int):
 
 
 @app.websocket("/run/")
-async def run(websocket: WebSocket, task: str, mode_override: str | None = None):
+async def run(
+    websocket: WebSocket,
+    task: str = "",
+    mode_override: str | None = None,
+    observe: bool = False,
+):
 
-    if not task:
+    if not task and not observe:
         raise WebSocketException(
             code=ws_status.WS_1008_POLICY_VIOLATION,
             reason="Task is a required parameter",
@@ -107,7 +133,41 @@ async def run(websocket: WebSocket, task: str, mode_override: str | None = None)
             reason="Mode Overrides can only be 'planner-actor' or 'autonomy'",
         )
 
+    if task:
+        if not _TASK_LOCK.acquire(blocking=False):
+            raise WebSocketException(
+                code=ws_status.WS_1008_POLICY_VIOLATION,
+                reason="Another task is already running. Stop it first.",
+            )
+    elif not _RUN_STATE["running"]:
+        raise WebSocketException(
+            code=ws_status.WS_1008_POLICY_VIOLATION,
+            reason="No task is currently running.",
+        )
+
     await websocket.accept()
+    _subscribers.add(websocket)
+
+    try:
+        if task:
+            await _run_task(websocket, task, mode_override)
+        else:
+            # Observer: just relay the running task's records until it ends.
+            while _RUN_STATE["running"]:
+                await asyncio.sleep(0.5)
+            if websocket.client_state != WebSocketState.DISCONNECTED:
+                await websocket.close(code=1000)
+    finally:
+        _subscribers.discard(websocket)
+        if task:
+            _TASK_LOCK.release()
+            _RUN_STATE["running"] = False
+            _RUN_STATE["task"] = None
+
+
+async def _run_task(websocket: WebSocket, task: str, mode_override: str | None):
+    _RUN_STATE["running"] = True
+    _RUN_STATE["task"] = task
 
     loop = asyncio.get_running_loop()
     stream = LogStream(loop)
@@ -139,29 +199,34 @@ async def run(websocket: WebSocket, task: str, mode_override: str | None = None)
     # Wait until the thread has registered its ID before we start streaming
     await thread_id_ready.wait()
 
+    # The starter socket is the Stop control: if it goes away, request a stop.
+    # The task itself keeps running and its records keep streaming to everyone
+    # until the worker thread actually ends (or the kill request takes effect).
+    disconnected = asyncio.Event()
+
+    async def watch_starter():
+        try:
+            while True:
+                await websocket.receive()
+        except Exception:
+            _kill_thread(thread_id_holder[0])
+            disconnected.set()
+
+    watcher = asyncio.create_task(watch_starter())
+
     try:
         async for record in stream.stream():
-            try:
-                await websocket.send_text(json.dumps(record))
-            except WebSocketDisconnect:
-                if thread_id_holder:
-                    _kill_thread(thread_id_holder[0])
-                future.cancel()
-                return
+            await _broadcast(record)
 
         try:
             await future
-            await websocket.send_text(json.dumps({"type": "status", "status": "done"}))
+            await _broadcast({"type": "status", "status": "done"})
         except Exception as exc:
-            await websocket.send_text(
-                json.dumps({"type": "status", "status": "error", "message": str(exc)})
-            )
-
-    except WebSocketDisconnect:
-        if thread_id_holder:
-            _kill_thread(thread_id_holder[0])
+            await _broadcast({"type": "status", "status": "error", "message": str(exc)})
     finally:
-        await websocket.close(code=1000)
+        watcher.cancel()
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.close(code=1000)
 
 
 def capture_desktop(
@@ -171,15 +236,19 @@ def capture_desktop(
     monitor = pc_screen.monitors[1]
 
     while True:
-        screenshot = pc_screen.grab(monitor)
-        img = np.array(screenshot)
+        try:
+            screenshot = pc_screen.grab(monitor)
+            img = np.array(screenshot)
 
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-        success, jpeg_img = cv2.imencode(
-            ".jpg",
-            img,
-            [cv2.IMWRITE_JPEG_QUALITY, streaming_quality],
-        )
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            success, jpeg_img = cv2.imencode(
+                ".jpg",
+                img,
+                [cv2.IMWRITE_JPEG_QUALITY, streaming_quality],
+            )
+        except Exception:
+            time.sleep(0.1)
+            continue
 
         if not success:
             continue
