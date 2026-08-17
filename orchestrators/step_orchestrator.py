@@ -1,5 +1,6 @@
 import time
 import models.actor_model as actor_model
+from models.actor_model import ActorModel
 from context_provider import ContextProvider
 from orchestrators.action_handlers import call_action
 from utils.logger import logger
@@ -31,6 +32,8 @@ class StepOrchestrator:
         self.hard_exit = False
 
         self.context_provider = ContextProvider()
+
+        self.actor_model = ActorModel()
 
         self.temp_task = None
         self.step_result: dict = {}
@@ -97,6 +100,7 @@ class StepOrchestrator:
                         self.additional_context,
                         punishment_tally=f"Iteration {iterations}/{MAX_ITERATIONS_PER_STEP} for this step\n{last_action_info}",
                         skills=self.skills,
+                        actor=self.actor_model,
                     )
                 except KeyboardInterrupt:
                     exit(1)
@@ -113,7 +117,10 @@ class StepOrchestrator:
                     contexts = []
                     last_ar = None
                     for single_action in self.step_result:
-                        if not isinstance(single_action, dict) or "action" not in single_action:
+                        if (
+                            not isinstance(single_action, dict)
+                            or "action" not in single_action
+                        ):
                             continue
                         last_ar = call_action(
                             action=single_action,
