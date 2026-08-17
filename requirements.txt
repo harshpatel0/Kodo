@@ -17,3 +17,6 @@ pillow
 tiktoken
 winotify
 windows-toasts
+pywebview
+pystray
+screeninfo

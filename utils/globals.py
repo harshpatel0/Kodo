@@ -4,6 +4,7 @@ PYTHON_RUNNER_VENV_NAME = ".kodo_venv"
 
 API_BIND_TO_ALL_IPS = True
 API_PORT = 5636
+WEB_PORT = 5173
 
 API_DESKTOP_STREAMING_FRAME_RATE = (
     30
@@ -68,22 +69,24 @@ ALLOWED_CONTROL_TYPES = {
     "ProgressBar",
 }
 
-DAC_ACTIONS = frozenset({
-    "list_processes",
-    "connect",
-    "list_controls",
-    "interact",
-    "expand",
-    "collapse",
-    "set_value",
-    "scroll",
-    "set_range_value",
-    "get_grid_item",
-    "minimize_window",
-    "maximize_window",
-    "restore_window",
-    "close_window",
-})
+DAC_ACTIONS = frozenset(
+    {
+        "list_processes",
+        "connect",
+        "list_controls",
+        "interact",
+        "expand",
+        "collapse",
+        "set_value",
+        "scroll",
+        "set_range_value",
+        "get_grid_item",
+        "minimize_window",
+        "maximize_window",
+        "restore_window",
+        "close_window",
+    }
+)
 
 STRUCTURAL_TYPES = {"Pane", "Group", "Window", "Custom"}
 import platform
@@ -101,3 +104,9 @@ AVAILABLE_INTERACTION_LAYERS: list[str] = [
     "multi_actions",
     "watchdog",
 ]
+
+TRAY_APP_WIDTH_PERCENTAGE = 55
+TRAY_APP_HEIGHT_PERCENTAGE = 28
+
+TRAY_APP_X_POSITION_PERCENTAGE = 50
+TRAY_APP_Y_POSITION_PERCENTAGE = 15

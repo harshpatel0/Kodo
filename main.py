@@ -12,7 +12,15 @@ from utils import check_layer
 from utils import toaster
 
 
-from utils.globals import API_BIND_TO_ALL_IPS, API_PORT
+from utils.globals import (
+    API_BIND_TO_ALL_IPS,
+    API_PORT,
+    WEB_PORT,
+    TRAY_APP_HEIGHT_PERCENTAGE,
+    TRAY_APP_WIDTH_PERCENTAGE,
+    TRAY_APP_X_POSITION_PERCENTAGE,
+    TRAY_APP_Y_POSITION_PERCENTAGE,
+)
 
 HOST = "127.0.0.1"
 if API_BIND_TO_ALL_IPS:
@@ -76,6 +84,45 @@ if __name__ == "__main__":
 
     else:
         import uvicorn
+        import webview
+        from trayapp import start_tray, WindowAPI
 
-        _open_browser_delayed(f"http://127.0.0.1:{API_PORT}")
-        uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
+        def _inject_blur_listener(window):
+            window.evaluate_js("""
+                window.addEventListener('blur', () => {
+                    window.pywebview.api.on_blur();
+                });
+            """)
+
+        def _bootstrap(window):
+            start_tray(window)
+            uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
+
+        webview_port = WEB_PORT if WEB_PORT else API_PORT
+
+        from screeninfo import get_monitors
+
+        primary_monitor = get_monitors()[0]
+        screen_width = primary_monitor.width
+        screen_height = primary_monitor.height
+
+        win_width = int(screen_width * (TRAY_APP_WIDTH_PERCENTAGE / 100))
+        win_height = int(screen_height * (TRAY_APP_HEIGHT_PERCENTAGE / 100))
+
+        win = webview.create_window(
+            "Kodo",
+            f"http://localhost:{webview_port}",
+            frameless=True,
+            width=win_width,
+            height=win_height,
+            x=int((screen_width - win_width) * (TRAY_APP_X_POSITION_PERCENTAGE / 100)),
+            y=int(
+                (screen_height - win_height) * (TRAY_APP_Y_POSITION_PERCENTAGE / 100)
+            ),
+            hidden=True,
+            resizable=True,
+            easy_drag=True,
+        )
+        win.expose(WindowAPI(win).on_blur)
+        win.events.loaded += lambda: _inject_blur_listener(win)
+        webview.start(_bootstrap, args=(win,))
