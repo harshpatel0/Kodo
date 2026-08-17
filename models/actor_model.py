@@ -17,8 +17,6 @@ from interactions.direct_app_control.direct_app_control_handler import (
 
 from interactions.daemons.daemons import daemon_provider
 
-actor_model = ActorModel()
-
 
 def log_to_debug_file(user_prompt: str, action: dict):
     with open(
@@ -46,7 +44,9 @@ def do_step(
     runtime_skills=None,
     available_skill_actions=None,
     directive=None,
+    actor: ActorModel | None = None,
 ):
+    actor = actor or ActorModel()
 
     cfg = (
         settings.models.autonomy_actor
@@ -56,33 +56,33 @@ def do_step(
     model_provider = cfg.provider
     model_name = cfg.model_name
 
-    actor_model.construct_system_prompt(skills=skills)
+    actor.construct_system_prompt(skills=skills)
 
-    user_prompt = actor_model.construct_user_prompt(
+    user_prompt = actor.construct_user_prompt(
         task=task, instruction=None, expected_result=None
     )
 
     if additional_context:
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt, additional_context
         )
 
     if punishment_tally:
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=punishment_tally,
             accompanying_message="Here are the number of iterations you have made on this task",
         )
 
     if available_skill_actions:
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=available_skill_actions,
             accompanying_message="The following are the available skill actions, skill actions run like any skill, you are advised on how to run them already",
         )
 
     if runtime_skills:
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=runtime_skills,
             accompanying_message="The following skill(s) was/were just installed and is now available to you:",
@@ -92,14 +92,14 @@ def do_step(
         settings.direct_app_control.always_populate_connected_app_controls
         and direct_app_handler.is_app_connected()
     ):
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt=user_prompt,
             additional_context=str(direct_app_handler.list_process_str()),
             accompanying_message=f"Here are the controls of the connected app {direct_app_handler.return_app_window()} with PID {direct_app_handler.return_connected_pid}",
         )
 
     if str(daemon_provider):
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt=user_prompt,
             additional_context=str(daemon_provider),
             accompanying_message="""# Continuous Watchers (Daemons) - ABSOLUTELY TRUST THIS
@@ -114,14 +114,14 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
     use_caching = getattr(provider, "use_caching", False)
 
     if history and not use_caching:
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=history,
             accompanying_message="Here is a running history of everything you said you did:",
         )
 
     if directive:
-        user_prompt = actor_model.return_prompt_with_additional_context(
+        user_prompt = actor.return_prompt_with_additional_context(
             user_prompt=user_prompt,
             additional_context=directive,
             accompanying_message="Here are directives from previous models, follow them:",
@@ -129,7 +129,7 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
 
     show_loading_text()
 
-    chat_response = actor_model.run(user_prompt)
+    chat_response = actor.run(user_prompt)
     response = chat_response.content
 
     tokens_in = chat_response.input_tokens
