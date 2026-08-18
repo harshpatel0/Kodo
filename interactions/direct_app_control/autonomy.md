@@ -7,7 +7,7 @@ UIA-based control of running apps — no focus steal, no cursor movement. Ranked
 
 **If already open:** never `open_app`/navigate. Go straight to `list_processes` → `connect` → act. Skip verification via screenshot/tree — DAC's control list is authoritative.
 
-**If connect fails** (claimed-open app not found): `retry` once with fresh `list_processes`, then `stuck` if still absent — don't guess-launch.
+**If connect fails** (claimed-open app not found / app blocked DAC): `retry` once with fresh `list_processes`, then `stuck` if still absent — don't guess-launch.
 
 ---
 
