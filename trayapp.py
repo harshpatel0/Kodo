@@ -14,6 +14,10 @@ class WindowAPI:
         self.window.hide()
 
 
+def mark_as_tray_app(window):
+    window.evaluate_js("localStorage.setItem('trayApp', 'true')")
+
+
 def _toggle_window(window):
     if window.hidden:
         window.show()

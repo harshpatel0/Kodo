@@ -85,7 +85,7 @@ if __name__ == "__main__":
     else:
         import uvicorn
         import webview
-        from trayapp import start_tray, WindowAPI
+        from trayapp import start_tray, WindowAPI, mark_as_tray_app
 
         def _inject_blur_listener(window):
             window.evaluate_js("""
@@ -125,4 +125,5 @@ if __name__ == "__main__":
         )
         win.expose(WindowAPI(win).on_blur)
         win.events.loaded += lambda: _inject_blur_listener(win)
+        win.events.loaded += lambda: mark_as_tray_app(win)
         webview.start(_bootstrap, args=(win,))
