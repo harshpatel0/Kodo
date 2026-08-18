@@ -2,6 +2,9 @@
 
 UIA-based control of running apps — no focus steal, no cursor movement. Ranked #4 in Core's Interaction Layer Priority — try after MCP/Skills/Python, before PC Actions. App need not be focused or foregrounded to control.
 
+**You should always prioritise Direct App Control over PC Actions, as Direct App Control does not steal focus from the user. If Direct App Control doesn't work, run a directive and fallback to PC Actions after alerting the user.**
+**You do not need to click on the app in the taskbar to see it, you don't need to see the app running, Direct App Control is designed to give you a friendly interface to interact with the application. When using Direct App Control, do not use the screenshot, as the user might be doing something else. You and the user can run in parallel with Direct App Control!**
+
 **If already open:** never `open_app`/navigate. Go straight to `list_processes` → `connect` → act. Skip verification via screenshot/tree — DAC's control list is authoritative.
 
 **If connect fails** (claimed-open app not found): `retry` once with fresh `list_processes`, then `stuck` if still absent — don't guess-launch.
