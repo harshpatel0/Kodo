@@ -159,7 +159,10 @@ def _launch_foreground(app_name, target, is_uwp):
 
 def open_app(app_name, background=False):
     if not app_name:
-        print("Error: No app name provided.", file=sys.stderr)
+        print(
+            "Error: Missing required argument 'app' (e.g. {\"app\": \"Notepad\"}).",
+            file=sys.stderr,
+        )
         return
 
     app_map = get_all_windows_apps()
@@ -228,7 +231,7 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    app = args.get("app")
+    app = args.get("app") or args.get("app_name")
     background = args.get("background", False)
 
     open_app(app, background)
