@@ -2,18 +2,7 @@ import json
 from types import SimpleNamespace
 
 from settings.default import default_settings
-from settings.types import (
-    CachingSettings,
-    ContextProviderSettings,
-    DirectAppControlSettings,
-    InteractionsSettings,
-    ModelProvidersSettings,
-    ModelsSettings,
-    OrchestratorSettings,
-    SkillsSettings,
-    WebUISettings,
-    TrayAppSettings,
-)
+from settings.types import *
 
 
 class Settings:
