@@ -12,6 +12,7 @@ from settings.types import (
     OrchestratorSettings,
     SkillsSettings,
     WebUISettings,
+    TrayAppSettings,
 )
 
 
@@ -27,6 +28,7 @@ class Settings:
     web_ui: WebUISettings
     direct_app_control: DirectAppControlSettings
     caching: CachingSettings
+    tray_app: TrayAppSettings
     data: dict
 
     def __init__(self, file_path: str) -> None:

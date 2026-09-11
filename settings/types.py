@@ -117,3 +117,11 @@ class WebUISettings:
     expose_web_ui_to_all_devices_on_the_network: bool
     desktop_streaming_quality_percentage: int
     desktop_streaming_frame_rate: int
+
+
+class TrayAppSettings:
+    width_percentage: int
+    height_percentage: int
+    x_position_percentage: int
+    y_position_percentage: int
+    web_ui_port: int
