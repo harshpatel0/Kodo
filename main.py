@@ -123,7 +123,7 @@ if __name__ == "__main__":
             resizable=True,
             easy_drag=True,
         )
-        win.expose(WindowAPI(win).on_blur)
-        win.events.loaded += lambda: _inject_blur_listener(win)
-        win.events.loaded += lambda: mark_as_tray_app(win)
+        win.expose(WindowAPI(win).on_blur)  # type: ignore
+        win.events.loaded += lambda: _inject_blur_listener(win)  # type: ignore
+        win.events.loaded += lambda: mark_as_tray_app(win)  # type: ignore
         webview.start(_bootstrap, args=(win,))
