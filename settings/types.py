@@ -122,6 +122,8 @@ class WebUISettings:
 class TrayAppSettings:
     width_percentage: int
     height_percentage: int
+    expanded_width_percentage: int
+    expanded_height_percentage: int
     x_position_percentage: int
     y_position_percentage: int
     web_ui_port: int

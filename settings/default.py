@@ -82,6 +82,8 @@ default_settings = {
         "height_percentage": 28,
         "x_position_percentage": 50,
         "y_position_percentage": 15,
+        "expanded_width_percentage": 65,
+        "expanded_height_percentage": 40,
         "web_ui_port": 5173,
     },
     "log_to_file": True,
