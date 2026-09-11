@@ -122,6 +122,7 @@ if __name__ == "__main__":
             window_api.close_app,
             window_api.minimise,
             window_api.toggle_expand,
+            window_api.toggle_pin,
         )
         win.events.loaded += lambda: _inject_blur_listener(win)  # type: ignore
         win.events.loaded += lambda: mark_as_tray_app(win)  # type: ignore
