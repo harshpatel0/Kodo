@@ -117,7 +117,6 @@ def _kill_thread(thread_id: int):
 async def run(
     websocket: WebSocket,
     task: str = "",
-    mode_override: str | None = None,
     observe: bool = False,
 ):
 
@@ -125,12 +124,6 @@ async def run(
         raise WebSocketException(
             code=ws_status.WS_1008_POLICY_VIOLATION,
             reason="Task is a required parameter",
-        )
-
-    if mode_override and mode_override not in ["planner-actor", "autonomy"]:
-        raise WebSocketException(
-            code=ws_status.WS_1008_POLICY_VIOLATION,
-            reason="Mode Overrides can only be 'planner-actor' or 'autonomy'",
         )
 
     if task:
@@ -150,7 +143,7 @@ async def run(
 
     try:
         if task:
-            await _run_task(websocket, task, mode_override)
+            await _run_task(websocket, task)
         else:
             # Observer: just relay the running task's records until it ends.
             while _RUN_STATE["running"]:
@@ -165,7 +158,7 @@ async def run(
             _RUN_STATE["task"] = None
 
 
-async def _run_task(websocket: WebSocket, task: str, mode_override: str | None):
+async def _run_task(websocket: WebSocket, task: str):
     _RUN_STATE["running"] = True
     _RUN_STATE["task"] = task
 
@@ -176,7 +169,7 @@ async def _run_task(websocket: WebSocket, task: str, mode_override: str | None):
     thread_id_holder: list[int] = []
     thread_id_ready = asyncio.Event()
 
-    def _run_with_stream_and_id(task, mode_override, stream):
+    def _run_with_stream_and_id(task, stream):
         # Capture the OS thread ID before doing any work
         thread_id_holder.append(threading.current_thread().ident)
         loop.call_soon_threadsafe(thread_id_ready.set)
@@ -185,16 +178,14 @@ async def _run_task(websocket: WebSocket, task: str, mode_override: str | None):
         web_emitter.attach(stream)
 
         try:
-            run_externally(task=task, mode_override=mode_override)
+            run_externally(task=task)
         except SystemExit:
             pass  # clean exit from _kill_thread
         finally:
             stream.detach()
             web_emitter.detach()
 
-    future = loop.run_in_executor(
-        None, _run_with_stream_and_id, task, mode_override, stream
-    )
+    future = loop.run_in_executor(None, _run_with_stream_and_id, task, stream)
 
     # Wait until the thread has registered its ID before we start streaming
     await thread_id_ready.wait()

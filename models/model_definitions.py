@@ -22,19 +22,12 @@ context_provider = ContextProvider()
 ui_tree_handler = UITreeHandler()
 
 
-USING_AUTONOMY_MODE = settings.orchestrator.use_autonomy_mode
-
-
 def _get_actor_config():
-    if USING_AUTONOMY_MODE:
-        return settings.models.autonomy_actor
-    return settings.models.actor
+    return settings.models.autonomy_actor
 
 
 def _get_actor_system_prompt():
-    if USING_AUTONOMY_MODE:
-        return prompts.AUTONOMY_MODE_SYSTEM_PROMPT
-    return prompts.ACTOR_SYSTEM_PROMPT
+    return prompts.AUTONOMY_MODE_SYSTEM_PROMPT
 
 
 def estimate_tokens(text: str) -> int:
@@ -95,7 +88,7 @@ class SkillInstallationMode:
         skills_data = skills_data or {}
         skills = skills_data.get("skills", [])
 
-        logger.debug(f"Requested Skills from Planner \n {skills}")
+        logger.debug(f"Requested Skills \n {skills}")
 
         installable_skills = [
             skill for skill in skills if skill_orchestrator.has_skill(skill)
@@ -103,79 +96,10 @@ class SkillInstallationMode:
 
         logger.debug(f"Installable skills: {installable_skills}")
 
-        if USING_AUTONOMY_MODE:
-            actor_skills = skill_orchestrator.load_all_requested_skills(
-                installable_skills, "actor"
-            )
-            return actor_skills, self.get_installed_skills()
-
-        planner_skills = skill_orchestrator.load_all_requested_skills(
-            installable_skills, "planner"
-        )
         actor_skills = skill_orchestrator.load_all_requested_skills(
             installable_skills, "actor"
         )
-
-        return planner_skills, actor_skills
-
-
-class PlannerModel:
-    system_prompt = prompts.PLANNER_SYSTEM_PROMPT
-
-    def __init__(self):
-        self.base_system_prompt = prompts.PLANNER_SYSTEM_PROMPT
-
-    def run(self, task, skills=None):
-        user_prompt = f"""
-# PC Environment
-OS: {context_provider.WINDOWS_VERSION}
-Screen: {context_provider.screen_width}x{context_provider.screen_height}
-Active Window: "{context_provider.get_active_window()}"
-
-Current Taskbar Setup Accessibility Tree
-{context_provider.get_taskbar_elements()}
-
-User Task: {task}
-
-# Registered MCP Servers
-{mcp_registry.get_tool_schemas()}
-"""
-        system_prompt = ""
-
-        if (
-            settings.models.planner.thinking
-            and settings.models.planner.model_name.startswith("gemma")
-        ):
-            system_prompt = system_prompt + "<|think|>"
-
-        system_prompt = system_prompt + self.base_system_prompt
-
-        if skills:
-            logger.info("[MODEL ORCHESTRATOR] Installing Skills into System Prompt")
-            system_prompt = system_prompt + f"""
-## Installed Skills
-The following skills have been installed and their actions are available to you.
-Treat skill actions as first-class actions alongside the standard ones above.
-
-{skills}
-"""
-        messages = [
-            ChatMessage(role="system", content=system_prompt),
-            ChatMessage(role="user", content=user_prompt),
-        ]
-
-        cfg = settings.models.planner
-        provider = get_provider(cfg)
-        response = provider.chat(
-            messages=messages,
-            model=cfg.model_name,
-            temperature=cfg.temperature,
-            keep_alive=getattr(cfg, "keep_alive", 0),
-            output_format="json",
-            thinking=getattr(cfg, "thinking", False),
-        )
-
-        return response
+        return actor_skills, self.get_installed_skills()
 
 
 class ActorModel:

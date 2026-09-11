@@ -2,10 +2,7 @@
 
 Hey agent, I can't be asked to maintain this file, so here is what is important, you figure out the rest
 
-Orchestrators are the ones that do the lifecycle stuff of the model. There are 2 types of orchestrators
-
-- Autonomy Mode Orchestrator is the default one
-- Planner-Actor Orchestrator Model
+Orchestrators are the ones that do the lifecycle stuff of the model. There's one now: the Autonomy Mode Orchestrator (`orchestrators/autonomy_orchestrator.py`). There used to also be a Planner-Actor Orchestrator (a separate Planner model producing a fixed JSON plan for an Actor to follow) — it was removed since real tasks drift from any plan made before execution starts.
 
 The Models are defined in `models/` where the corresponding file is used based on what mode it is currently running in. Where the system and user prompts are made based on the orchestrators command to the corresponding class
 

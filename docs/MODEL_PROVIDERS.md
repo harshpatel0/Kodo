@@ -1,7 +1,7 @@
 # Model Providers - Choosing, Configuring, and Using
 
 Kodo supports multiple model backends via a pluggable provider abstraction.
-Each of the four model roles (`skill_installation`, `planner`, `actor`, `autonomy_actor`)
+Each of the two model roles (`skill_installation`, `autonomy_actor`)
 can use a **different provider** independently.
 
 ---
@@ -13,8 +13,7 @@ Set the `provider` field on each model role in `settings.json`:
 ```json
 {
   "models": {
-    "planner": { "provider": "anthropic", "model_name": "claude-sonnet-4-20250514", ... },
-    "actor":   { "provider": "ollama",    "model_name": "gemma4:e4b", ... },
+    "skill_installation": { "provider": "ollama", "model_name": "gemma4:e4b", ... },
     "autonomy_actor": { "provider": "google", "model_name": "gemini-2.5-flash", ... }
   }
 }
@@ -92,10 +91,10 @@ Then configure:
     }
   },
   "models": {
-    "planner": {
+    "autonomy_actor": {
       "provider": "anthropic",
       "model_name": "claude-sonnet-4-20250514",
-      "temperature": 0.3
+      "temperature": 0.5
     }
   }
 }
@@ -144,7 +143,7 @@ The project is still in development, uses a lot of input tokens and requires rea
 
 ## Using the Provider Directly
 
-All existing code (`ActorModel.run()`, `PlannerModel.run()`, `SkillInstallationMode.run()`)
+All existing code (`ActorModel.run()`, `SkillInstallationMode.run()`)
 resolves the provider internally — no changes needed in your task code.
 
 But you can also use the provider directly for custom logic:
@@ -153,12 +152,12 @@ But you can also use the provider directly for custom logic:
 from models.provider import get_provider, ChatMessage
 from settings.settings import settings
 
-cfg = settings.models.planner
+cfg = settings.models.autonomy_actor
 provider = get_provider(cfg)
 
 response = provider.chat(
     messages=[
-        ChatMessage(role="system", content="You are a planner"),
+        ChatMessage(role="system", content="You are an assistant"),
         ChatMessage(role="user", content="Plan this task for me"),
     ],
     model=cfg.model_name,

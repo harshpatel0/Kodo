@@ -15,19 +15,6 @@ const FIELDS = [
   { id: 'cfg-skill-temp',          path: 'models.skill_installation.temperature', type: 'number' },
   { id: 'cfg-skill-keepalive',     path: 'models.skill_installation.keep_alive',  type: 'number' },
 
-  // Planner model
-  { id: 'cfg-planner-model',       path: 'models.planner.model_name',  type: 'text' },
-  { id: 'cfg-planner-temp',        path: 'models.planner.temperature', type: 'number' },
-  { id: 'cfg-planner-keepalive',   path: 'models.planner.keep_alive',  type: 'number' },
-  { id: 'cfg-planner-thinking',    path: 'models.planner.thinking',    type: 'bool' },
-
-  // Actor model
-  { id: 'cfg-actor-model',         path: 'models.actor.model_name',   type: 'text' },
-  { id: 'cfg-actor-temp',          path: 'models.actor.temperature',  type: 'number' },
-  { id: 'cfg-actor-keepalive',     path: 'models.actor.keep_alive',   type: 'number' },
-  { id: 'cfg-actor-thinking',      path: 'models.actor.thinking',     type: 'bool' },
-  { id: 'cfg-actor-screenshot',    path: 'models.actor.attach_screenshot_of_active_window', type: 'bool' },
-
   // Autonomy actor model
   { id: 'cfg-auto-model',          path: 'models.autonomy_actor.model_name',  type: 'text' },
   { id: 'cfg-auto-temp',           path: 'models.autonomy_actor.temperature', type: 'number' },
@@ -37,10 +24,7 @@ const FIELDS = [
 
   // Orchestrator
   { id: 'cfg-settle-time',             path: 'orchestrator.action_settle_time',                          type: 'number' },
-  { id: 'cfg-use-autonomy',            path: 'orchestrator.use_autonomy_mode',              type: 'bool' },
-  { id: 'cfg-max-iter-per-step',       path: 'orchestrator.planner_architecture.max_iterations_per_step',type: 'number' },
-  { id: 'cfg-max-autonomy-steps',      path: 'orchestrator.planner_architecture.max_autonomy_steps',     type: 'number' },
-  { id: 'cfg-max-replan-loop',         path: 'orchestrator.planner_architecture.max_replan_loop',        type: 'number' },
+  { id: 'cfg-max-replan-loop',         path: 'orchestrator.max_replan_loop',                             type: 'number' },
   { id: 'cfg-max-total-iter',          path: 'orchestrator.autonomy_orchestrator.max_total_iterations',  type: 'number' },
 
   // Context provider

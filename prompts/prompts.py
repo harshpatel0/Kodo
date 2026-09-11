@@ -55,13 +55,5 @@ def construct_autonomy_mode_prompt() -> str:
     return construct_mode_prompt("autonomy")
 
 
-def construct_actor_mode_prompt() -> str:
-    return construct_mode_prompt("actor")
-
-
-def construct_planner_mode_prompt() -> str:
-    return construct_mode_prompt("planner")
-
-
 def construct_skill_installation_mode_prompt() -> str:
     return construct_mode_prompt("skill_installation")
