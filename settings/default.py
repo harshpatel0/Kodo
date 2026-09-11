@@ -50,7 +50,7 @@ default_settings = {
         "no_skill_installation_mode": True,
     },
     "orchestrator": {
-        "action_settle_time": 4,
+        "action_settle_time": 0.2,
         "max_replan_loop": 7,
         "autonomy_orchestrator": {
             "max_total_iterations": 50,
@@ -58,8 +58,8 @@ default_settings = {
         },
     },
     "context_provider": {
-        "waiting_period": 4,
-        "skip_after_ticks": 10,
+        "waiting_period": 2,
+        "skip_after_ticks": 5,
         "take_full_screen_screenshot": True,
         "screenshot_quality_percentage": 80,
         "provide_uia_tree": True,
@@ -68,7 +68,10 @@ default_settings = {
     "skills": {
         "skill_timeout": 0,
     },
-    "direct_app_control": {"always_populate_connected_app_controls": True, "use_diffing": False},
+    "direct_app_control": {
+        "always_populate_connected_app_controls": True,
+        "use_diffing": False,
+    },
     "web_ui": {
         "expose_web_ui_to_all_devices_on_the_network": False,
         "desktop_streaming_quality_percentage": 85,

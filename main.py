@@ -98,6 +98,7 @@ if __name__ == "__main__":
             start_tray(window)
             uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
 
+        # Deprecate the built in Web UI for the other one at KodoFrontend.
         webview_port = WEB_PORT if WEB_PORT else API_PORT
 
         from screeninfo import get_monitors
