@@ -33,7 +33,7 @@ LOADING_TEXT = [
     "Downloading a car",
     "Asking Mom to get the camera",
     "Increasing the model temperature",
-    "Applying a flames decal",
+    "Applying a flames decal for faster speeds",
     "Thinking of dyeing my hair red",
     "Subscribing to PewDiePie instead of T-Series",
     "Getting griefed by Bowie knife99",
@@ -61,5 +61,5 @@ def show_loading_text():
     from utils import toaster
     from utils.logger import logger
 
-    toaster.update("Kodo Loading", loading_text)
+    toaster.update(loading_text, "Connecting with your AI provider...")
     logger.info(loading_text)
