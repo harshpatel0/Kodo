@@ -85,10 +85,6 @@ if __name__ == "__main__":
                 });
             """)
 
-        def _bootstrap(window):
-            start_tray(window)
-            uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
-
         # Deprecate the built in Web UI for the other one at KodoFrontend.
         web_port = settings.tray_app.web_ui_port
         webview_port = web_port if web_port else API_PORT  # The port used by the tray
@@ -124,7 +120,18 @@ if __name__ == "__main__":
             easy_drag=True,
         )
 
-        win.expose(WindowAPI(win).on_blur)  # type: ignore
+        window_api = WindowAPI(win)
+        win.expose(  # type: ignore
+            window_api.on_blur,
+            window_api.close_app,
+            window_api.minimise,
+            window_api.toggle_expand,
+        )
         win.events.loaded += lambda: _inject_blur_listener(win)  # type: ignore
         win.events.loaded += lambda: mark_as_tray_app(win)  # type: ignore
+
+        def _bootstrap(window):
+            start_tray(window, window_api)
+            uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
+
         webview.start(_bootstrap, args=(win,))
