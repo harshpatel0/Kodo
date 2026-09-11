@@ -22,7 +22,7 @@ This is a project I started making on my own with no scope planning or safety de
 - [Setup](#setup)
 - [Running Kodo](#running-kodo)
 - [Custom Instructions](#custom-instructions)
-- [Modes](#modes)
+- [Autonomy Mode](#autonomy-mode)
 - [Settings](#settings)
 - [Model Recommendations](#model-recommendations)
 - [Skills](#skills)
@@ -109,16 +109,14 @@ This will run your task directly and quit once the LLM invokes the `done` action
 
 ### You can do this too, if you want to
 
-Open `orchestrator.py` and set your task at the bottom of the file. There are two modes, covered in the next section.
+Open `orchestrator.py` and set your task at the bottom of the file.
 
 ```python
 if __name__ == "__main__":
     task = "Paste my clipboard contents to a file called clipboard_contents.txt, delete the old file if it exists"
 
-    run_externally(task=task, mode_override="autonomy OR planner-actor")
+    run_externally(task=task)
 ```
-
-Define the settings in `settings.json` on the mode you would like to use under `settings > orchestrator > use_autonomy_mode`
 
 Then:
 
@@ -131,19 +129,11 @@ Keep your mouse away from the top-left corner of the screen. That's the pyautogu
 
 ---
 
-## Modes
+## Autonomy Mode
 
-### Planner-Actor Mode
+There's no upfront plan. The actor runs in a free loop, observing the UI state each turn, deciding what to do, and acting. It keeps a running `history` string across turns as its working memory.
 
-A **Planner** model reads your task and produces a structured JSON plan, a list of ordered atomic steps with instructions and expected results. A separate **Actor** model then executes each step one at a time, reading the live accessibility tree on every call to figure out where to click or what to type.
-
-This mode is more predictable. If something breaks on step 4, you know exactly where it broke. When the planned steps run out but the task is not finished, it automatically spills into a short autonomy phase to wrap up.
-
-### Autonomy Mode
-
-Skip the plan entirely. The actor runs in a free loop, observing the UI state each turn, deciding what to do, and acting. It keeps a running `history` string across turns as its working memory.
-
-This mode handles open-ended tasks better. Run `run_skill_installation_mode()` before `run()` so it has the relevant skills loaded going in.
+Kodo used to also ship a Planner-Actor mode, where a separate Planner model produced a fixed JSON plan for an Actor to follow. It was dropped: real tasks drift from any plan made before execution starts, and reconciling that drift with a fixed checklist caused more confusion than it prevented. The actor deciding its own path as it goes, with no harness holding it to a stale plan, is the whole architecture now.
 
 ---
 
@@ -182,21 +172,6 @@ On first run, Kodo writes a `settings.json` to the project root using the defaul
       "keep_alive": 0
     },
 
-    "planner": {
-      "model_name": "gemma4:e4b",
-      "thinking": true,
-      "temperature": 0.7,
-      "keep_alive": 0
-    },
-
-    "actor": {
-      "model_name": "gemma4:e4b",
-      "thinking": true,
-      "temperature": 0.3,
-      "keep_alive": 30,
-      "attach_screenshot_of_active_window": false
-    },
-
     "autonomy_actor": {
       "model_name": "gemma4:e4b",
       "thinking": true,
@@ -207,13 +182,7 @@ On first run, Kodo writes a `settings.json` to the project root using the defaul
   },
   "orchestrator": {
     "action_settle_time": 4,
-    "use_autonomy_mode": false,
-
-    "planner_architecture": {
-      "max_iterations_per_step": 10,
-      "max_autonomy_steps": 10,
-      "max_replan_loop": 7
-    },
+    "max_replan_loop": 7,
 
     "autonomy_orchestrator": {
       "enforce_max_total_iterations": true,
@@ -235,25 +204,13 @@ On first run, Kodo writes a `settings.json` to the project root using the defaul
 | `models.skill_installation.model_name` | `gemma4:e4b` | Model used for the pre-planning skill selection call. Can be a smaller/faster model since the task is just picking from a list. |
 | `models.skill_installation.temperature` | `0.1` | Keep this low. Skill selection should be precise. |
 | `models.skill_installation.keep_alive` | `0` | Skill installation runs once per task. No reason to keep it warm. |
-| `models.planner.model_name` | `gemma4:e4b` | Model used to generate the step-by-step plan in Planner-Actor mode. |
-| `models.planner.thinking` | `true` | Prepends `<\|think\|>` to the system prompt. **Gemma 4 models only.** See the warning in Model Recommendations. |
-| `models.planner.temperature` | `0.7` | How varied the planner's output is. 0.7 is the recommended value. |
-| `models.planner.keep_alive` | `0` | The planner runs once per task so there's no reason to keep it warm. |
-| `models.actor.model_name` | `gemma4:e4b` | Model used in Planner-Actor mode. Reads the live UI tree and emits a single JSON action per call. |
-| `models.actor.thinking` | `true` | Same as planner thinking. **Gemma 4 only.** |
-| `models.actor.temperature` | `0.3` | Keep the actor cooler than the planner. Consistent action selection matters more than variety. |
-| `models.actor.keep_alive` | `30` | The actor runs many times per task. Keeping it loaded saves reload overhead between steps. |
-| `models.actor.attach_screenshot_of_active_window` | `false` | Attaches a JPEG screenshot of the active window to each actor call. Only useful if your model has vision. |
-| `models.autonomy_actor.model_name` | `gemma4:e4b` | Model used in Autonomy mode. Same role as the actor but handles planning and execution in one. |
-| `models.autonomy_actor.thinking` | `true` | **Gemma 4 only.** More important here than in planner-actor mode since the model is doing both jobs. |
-| `models.autonomy_actor.temperature` | `0.5` | Middle ground between the planner and actor temperatures since the autonomy actor does both jobs. |
-| `models.autonomy_actor.keep_alive` | `150` | Autonomy mode runs many more iterations than planner-actor mode, so keeping the model loaded longer is worth it. |
-| `models.autonomy_actor.attach_screenshot_of_active_window` | `false` | Same as the actor screenshot setting, independently configurable for autonomy mode. |
-| `orchestrator.action_settle_time` | `4` | Seconds to wait after each action before reading the UI tree again. Reduce this if your apps respond fast. Increase it if the actor keeps acting before the UI has caught up. Applies to both orchestrators. |
-| `orchestrator.use_autonomy_mode` | `false` | Switches the entire system to Autonomy mode. Changes which model configs, system prompts, and orchestrator are used. |
-| `orchestrator.planner_architecture.max_iterations_per_step` | `10` | How many times the actor can retry a single step before the run aborts. Each retry feeds the previous failure message back as context. |
-| `orchestrator.planner_architecture.max_autonomy_steps` | `10` | Extra steps the `StepOrchestrator` can take after the plan runs out, in its built-in fallback autonomy phase. |
-| `orchestrator.planner_architecture.max_replan_loop` | `7` | If the actor replans to the same instruction this many times in a row, it's flagged as a loop and the run is killed. |
+| `models.autonomy_actor.model_name` | `gemma4:e4b` | Model that reads the UI tree and decides + executes each step, one action at a time. |
+| `models.autonomy_actor.thinking` | `true` | Prepends `<\|think\|>` to the system prompt. **Gemma 4 models only.** See the warning in Model Recommendations. |
+| `models.autonomy_actor.temperature` | `0.5` | Middle ground -- the autonomy actor is both deciding what to do and how to do it, so it needs some variety without being erratic. |
+| `models.autonomy_actor.keep_alive` | `150` | Autonomy mode runs many iterations per task, so keeping the model loaded is worth it. |
+| `models.autonomy_actor.attach_screenshot_of_active_window` | `false` | Attaches a JPEG screenshot of the active window to each turn. Only useful if your model has vision. |
+| `orchestrator.action_settle_time` | `4` | Seconds to wait after each action before reading the UI tree again. Reduce this if your apps respond fast. Increase it if the actor keeps acting before the UI has caught up. |
+| `orchestrator.max_replan_loop` | `7` | If the actor replans to the same instruction this many times in a row, it's flagged as a loop and the run is killed. |
 | `orchestrator.autonomy_orchestrator.enforce_max_total_iterations` | `true` | Set to `false` to let Autonomy mode run without a turn limit. Only do this if you're watching it. |
 | `orchestrator.autonomy_orchestrator.max_total_iterations` | `50` | Hard cap on how many turns `AutonomyOrchestrator` can run. Ignored if `enforce_max_total_iterations` is `false`. |
 | `context_provider.waiting_period` | `4` | Consecutive stable ticks required before the UI tree is considered settled and ready to read. |
@@ -261,10 +218,9 @@ On first run, Kodo writes a `settings.json` to the project root using the defaul
 
 ### Recommended Temperature Settings
 
-| Mode | Skill Installation | Planner | Actor |
-|---|---|---|---|
-| Planner-Actor | 0.1 | 0.7 | 0.3 |
-| Autonomy | 0.1 | -- | 0.5 |
+| Skill Installation | Autonomy Actor |
+|---|---|
+| 0.1 | 0.5 |
 
 ---
 
@@ -285,13 +241,13 @@ Kodo was built on `gemma4:e4b` and that's still the recommendation. It handles s
 
 ## Skills
 
-Skills are how you extend Kodo beyond basic mouse and keyboard actions. A skill can teach the planner how to approach a task, give the actor step-by-step procedural guidance for a specific application, expose new callable actions the actor can emit, or all of the above.
+Skills are how you extend Kodo beyond basic mouse and keyboard actions. A skill can give the actor step-by-step procedural guidance for a specific application, expose new callable actions the actor can emit, or both.
 
 ### Skill Types
 
 #### Documentation Skills
 
-Documentation skills teach a model how to operate specific UI elements or complete specific tasks. They do not have any actions or functions assigned to them, just markdown files that get loaded into the planner and/or actor system prompts when the skill is selected.
+Documentation skills teach the actor how to operate specific UI elements or complete specific tasks. They do not have any actions or functions assigned to them, just markdown files that get loaded into the actor's system prompt when the skill is selected.
 
 `word-navigation` is the main example. It gives the actor a full procedural guide for Microsoft Word's UIA tree, covering the Apply Styles dialog, cursor anchoring, heading application order, save flows, and every gotcha that would otherwise cause a stuck loop. Without it the actor is guessing.
 
@@ -299,7 +255,7 @@ Documentation skills teach a model how to operate specific UI elements or comple
 
 #### Static Skills
 
-Have a Python entry point and register named actions the actor can emit directly. Documentation lives in static `actor_skill.md` and `planner_skill.md` files that are loaded once and injected as-is.
+Have a Python entry point and register named actions the actor can emit directly. Documentation lives in a static `actor_skill.md` file that is loaded once and injected as-is.
 
 `browser-navigation` and `toast-notifications` are both static skills.
 
@@ -314,7 +270,7 @@ When the actor emits a registered action name, the skill orchestrator intercepts
 
 The entry point runs with a `--generate` flag at load time and produces documentation as a JSON string rather than reading from static files. The skill generates its own context based on the current system state.
 
-`launch-windows-app` is the example here. It scans the Start Menu at runtime to find every installed `.lnk` shortcut, then injects the real list of launchable apps into both the planner and actor prompts. The model always sees your actual installed apps rather than a hardcoded list.
+`launch-windows-app` is the example here. It scans the Start Menu at runtime to find every installed `.lnk` shortcut, then injects the real list of launchable apps into the actor's prompt. The model always sees your actual installed apps rather than a hardcoded list.
 
 ```json
 {"action": "open_app", "app": "Microsoft Word"}
@@ -324,7 +280,6 @@ The `--generate` output must look like this:
 
 ```json
 {
-  "planner": "## My Skill\nPlanner documentation here...",
   "actor": "## My Skill\nActor documentation here..."
 }
 ```
@@ -338,7 +293,6 @@ skills/
   my-skill/
     skill.json
     actor_skill.md
-    planner_skill.md
     skill.py
 ```
 
@@ -351,7 +305,6 @@ Documentation-only:
 skills/my-app-guide/
   skill.json
   actor_skill.md
-  planner_skill.md
 ```
 
 Static skill with actions:
@@ -359,7 +312,6 @@ Static skill with actions:
 skills/my-tool/
   skill.json
   actor_skill.md
-  planner_skill.md
   skill.py
 ```
 
@@ -390,8 +342,7 @@ if __name__ == "__main__":
   "entry": "skill.py",
   "enabled": true,
   "dynamic_context": false,
-  "generated_for_actor": true,
-  "generated_for_planner": true
+  "generated_for_actor": true
 }
 ```
 
@@ -404,7 +355,6 @@ if __name__ == "__main__":
 | `enabled` | No | Set to `false` to disable without deleting. Defaults to `true`. |
 | `dynamic_context` | No | Set to `true` to enable runtime context generation. Entry point must handle `--generate` argument. |
 | `generated_for_actor` | No | Used with `dynamic_context: true`. Tells the orchestrator this skill produces actor documentation. |
-| `generated_for_planner` | No | Used with `dynamic_context: true`. Tells the orchestrator this skill produces planner documentation. |
 
 ---
 
@@ -414,30 +364,9 @@ Here's what happens when you give Kodo a task.
 
 ### Skill Installation Phase
 
-Before planning or execution starts, `SkillInstallationMode` makes a call to a model with the task description and a compact summary of all available skills. The model returns a list of skill names it thinks are relevant. Those skills get loaded and their documentation is read or generated, held ready to inject into the planner and actor prompts.
+Before execution starts, `SkillInstallationMode` makes a call to a model with the task description and a compact summary of all available skills. The model returns a list of skill names it thinks are relevant. Those skills get loaded and their documentation is read or generated, held ready to inject into the actor's prompt.
 
-The model first sees the name and the description from `skills.json` and picks what it needs, and the full documentation is only loaded if the skill is selected. This keeps the main system prompts from bloating with content that has nothing to do with the current task.
-
-### Planner-Actor Mode
-
-```
-Task
-  -> SkillInstallationMode
-  -> PlannerModel          (produces JSON plan)
-  -> StepOrchestrator
-  -> ActorModel (per step) (reads UI tree, emits one action)
-  -> PCActions / Skills
-```
-
-The Planner gets the task alongside a snapshot of the PC environment: OS version, screen size, installed apps, pinned taskbar apps, and the current taskbar accessibility tree. It produces a JSON plan with ordered, atomic steps.
-
-The StepOrchestrator walks the steps. For each one it calls the Actor with the current instruction, the live UI tree, taskbar elements, and any context accumulated from previous iterations on that step.
-
-The Actor returns a single JSON action. That action gets dispatched to a `PCAction` (click, type, hotkey, scroll, drag) or to the Skill Orchestrator if it matches a registered skill action name.
-
-The Actor also signals state. `PROCEED` moves to the next step. `DONE` ends the run. `STUCK` and `RETRY` add the failure message as context and loop again on the same step. `REPLAN` allows the actor to override its current instruction entirely, substituting a new one of its own choosing mid-execution.
-
-`DONE` is not taken at face value. Before accepting it, the orchestrator checks whether the element the actor claimed to have acted on is actually present in the active window. If it isn't, the actor gets pushed back with a message telling it what's missing. The Gemini incident above would have been caught by this if the element check had matched -- it didn't, because the task completion condition was ambiguous.
+The model first sees the name and the description from `skills.json` and picks what it needs, and the full documentation is only loaded if the skill is selected. This keeps the main system prompt from bloating with content that has nothing to do with the current task.
 
 ### Autonomy Mode
 
@@ -449,7 +378,11 @@ Task
   -> PCActions / Skills
 ```
 
-The actor runs in a free loop without planning and a `history` string as its working memory across turns. Each turn the model reads the live UI state, reasons about what to do next, acts, and appends a one-line summary to the history.
+The actor runs in a free loop without an upfront plan and a `history` string as its working memory across turns. Each turn the model reads the live UI state, reasons about what to do next, acts, and appends a one-line summary to the history.
+
+The actor also signals state. `DONE` ends the run. `STUCK` and `RETRY` add the failure message as context and loop again. `REPLAN` allows the actor to override its own next step entirely, substituting a new one of its choosing mid-execution.
+
+`DONE` is not taken at face value. Before accepting it, the orchestrator checks whether the element the actor claimed to have acted on is actually present in the active window. If it isn't, the actor gets pushed back with a message telling it what's missing. The Gemini incident above would have been caught by this if the element check had matched -- it didn't, because the task completion condition was ambiguous.
 
 The actor can request skill installation mid-task via `{"action": "install_skills", "skills": [...]}`. This pauses execution, loads the requested skills, and injects them into the next turn's context.
 

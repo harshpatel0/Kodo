@@ -4,7 +4,6 @@
   "actions": ["open_app"],
   "entry": "skill.py",
   "dynamic_context": true,
-  "generated_for_planner": true,
   "generated_for_actor": true,
   "dependencies": ["psutil"]
 }

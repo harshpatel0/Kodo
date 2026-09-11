@@ -62,7 +62,6 @@ export async function postSettings(data, params = {}) {
  *
  * @param {object}   options
  * @param {string}   options.task           - Task description
- * @param {string}   [options.modeOverride] - 'planner' | 'autonomy' | null
  * @param {function} options.onMessage      - Called with each parsed frame object
  * @param {function} options.onDone         - Called when run completes (status=done)
  * @param {function} options.onError        - Called with error message string
@@ -70,9 +69,8 @@ export async function postSettings(data, params = {}) {
  *
  * @returns {{ cancel: function }} - Call cancel() to abort the run
  */
-export function startRun({ task, modeOverride, onMessage, onDone, onError, onClose }) {
+export function startRun({ task, onMessage, onDone, onError, onClose }) {
   const params = new URLSearchParams({ task });
-  if (modeOverride) params.set('mode_override', modeOverride);
 
   const url = `${WS_BASE}/run/?${params}`;
   const ws  = new WebSocket(url);

@@ -20,7 +20,6 @@ skills/
 └── my-skill/
     ├── skill.json          # Required. Declares the skill's metadata.
     ├── skill.py            # Required only if the skill defines actions or dynamic context.
-    ├── planner_skill.md    # Guidance injected into the Planner's prompt (see rules below).
     └── actor_skill.md      # Guidance injected into the Actor's prompt (see rules below).
 ```
 
@@ -41,7 +40,6 @@ Every skill must have a `skill.json`. It is the only required file.
 | `entry` | string | No | Filename of the entry point script (e.g. `"skill.py"`). **Required if `actions` is non-empty or `dynamic_context` is `true`.** |
 | `dependencies` | string[] | No | pip packages to install before the skill runs. |
 | `dynamic_context` | boolean | No | If `true`, the entry point generates guidance at runtime via `--generate`. |
-| `generated_for_planner` | boolean | No | Used with `dynamic_context`. Indicates the generator produces planner guidance. |
 | `generated_for_actor` | boolean | No | Used with `dynamic_context`. Indicates the generator produces actor guidance. |
 | `accompanies_mcp` | string | No | Name of an MCP server this skill provides usage guidance for. When set, the skill selector will install this skill alongside the MCP. The value must match the MCP server's `name` in `mcp_servers.json`. |
 
@@ -84,7 +82,7 @@ If stdout is empty after execution, the Orchestrator treats the action as failed
 
 ### Type 1 — Guidance Only (no entry point)
 
-Provides `.md` files that are injected into the Planner and/or Actor system prompts.
+Provides an `actor_skill.md` file that is injected into the Actor's system prompt.
 No Python is executed. No `entry` field needed.
 
 ```json
@@ -97,8 +95,8 @@ No Python is executed. No `entry` field needed.
 }
 ```
 
-At least one of `planner_skill.md` or `actor_skill.md` must be present — a guidance-only
-skill with no `.md` files contributes nothing.
+`actor_skill.md` must be present — a guidance-only skill with no `.md` file contributes
+nothing.
 
 ---
 
@@ -223,9 +221,9 @@ if __name__ == "__main__":
 
 ### Type 3 — Dynamic Context
 
-The entry point generates its own guidance at runtime instead of relying on static `.md`
-files. Useful when guidance depends on system state (e.g. listing installed apps).
-Static `.md` files are not needed — and should not be present — when context is fully
+The entry point generates its own guidance at runtime instead of relying on a static
+`.md` file. Useful when guidance depends on system state (e.g. listing installed apps).
+The static `.md` file is not needed — and should not be present — when context is fully
 dynamic.
 
 ```json
@@ -235,7 +233,6 @@ dynamic.
   "actions": ["open_app"],
   "entry": "skill.py",
   "dynamic_context": true,
-  "generated_for_planner": true,
   "generated_for_actor": true
 }
 ```
@@ -253,8 +250,7 @@ import json
 def generate_context():
     # Build guidance strings dynamically — e.g. query the system here
     context = {
-        "planner": "## My Skill — Planner Guide\n...",
-        "actor":   "## My Skill — Actor Guide\n..."
+        "actor": "## My Skill — Actor Guide\n..."
     }
     print(json.dumps(context))  # stdout — Orchestrator parses this
     sys.exit(0)
@@ -273,46 +269,25 @@ if __name__ == "__main__":
     open_app(args.get("app"))
 ```
 
-- The JSON object printed during `--generate` must contain `"planner"` and/or `"actor"`
-  keys whose values are markdown strings.
-- Only include keys that match `generated_for_planner` / `generated_for_actor` in
-  `skill.json`. A skill can generate guidance for just one consumer if needed.
+- The JSON object printed during `--generate` must contain an `"actor"` key whose value
+  is a markdown string.
 
 ---
 
-## Guidance Documents — planner_skill.md and actor_skill.md
+## Guidance Documents — actor_skill.md
 
-These files are injected verbatim into the LLM's system prompt. Write them as if
+This file is injected verbatim into the Actor's system prompt. Write it as if
 briefing a capable but context-blind agent.
 
-### When .md files are needed
+### When actor_skill.md is needed
 
-| Skill type | planner_skill.md | actor_skill.md |
-|---|---|---|
-| Guidance only (no entry point) | At least one must be present | At least one must be present |
-| Executable actions, static guidance | Recommended | Recommended |
-| Dynamic context (`dynamic_context: true`) | Not needed — generated at runtime | Not needed — generated at runtime |
+| Skill type | actor_skill.md |
+|---|---|
+| Guidance only (no entry point) | Must be present |
+| Executable actions, static guidance | Recommended |
+| Dynamic context (`dynamic_context: true`) | Not needed — generated at runtime |
 
-A skill does not need both files. A skill that only informs the Planner (e.g. strategic
-planning rules) only needs `planner_skill.md`. A skill that only teaches the Actor how
-to invoke an action only needs `actor_skill.md`. Provide whichever subset is useful.
-
-### planner_skill.md
-
-Teaches the Planner **what** to plan and **when** to use this skill's actions.
-
-- Describe when the skill is appropriate.
-- Show the instruction format the Planner should emit for each action:
-  ```
-  instruction: "action_name | param=value param2=value2"
-  ```
-- Describe `expected_result` phrasing — it must describe a verifiable system state,
-  not script output.
-- Include a fallback UI path in case the action fails.
-
-### actor_skill.md
-
-Teaches the Actor **how** to invoke actions and recover from failure.
+Teach the Actor **how** to invoke actions and recover from failure:
 
 - Show the exact JSON the Actor should emit for each action:
   ```json
@@ -338,8 +313,7 @@ Teaches the Actor **how** to invoke actions and recover from failure.
 - [ ] All success output goes to **stdout**; all errors go to **stderr**.
 - [ ] Every action prints a confirmation string to stdout on success.
 - [ ] `dependencies` lists every non-stdlib package the entry point imports.
-- [ ] `.md` files are present when the skill is not dynamically generated; at minimum
-      one of `planner_skill.md` or `actor_skill.md` must exist.
+- [ ] `actor_skill.md` is present when the skill is not dynamically generated.
 - [ ] Skill folder name matches the `name` field in `skill.json`.
 - [ ] `accompanies_mcp` set when the skill is a documentation companion for an MCP server;
       value must match the MCP server's `name` in `mcp_servers.json`.
@@ -348,9 +322,9 @@ Teaches the Actor **how** to invoke actions and recover from failure.
 
 ## Quick Reference — skill.json Combinations
 
-| Has actions? | Dynamic context? | Needs `entry`? | Needs `.md` files? |
+| Has actions? | Dynamic context? | Needs `entry`? | Needs `actor_skill.md`? |
 |---|---|---|---|
-| No | No | No | Yes — at least one of planner or actor |
-| Yes | No | Yes | Recommended — whichever consumers use the skill |
+| No | No | No | Yes |
+| Yes | No | Yes | Recommended |
 | No | Yes | Yes | No — generated at runtime |
 | Yes | Yes | Yes | No — generated at runtime |

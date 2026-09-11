@@ -48,11 +48,7 @@ def do_step(
 ):
     actor = actor or ActorModel()
 
-    cfg = (
-        settings.models.autonomy_actor
-        if settings.orchestrator.use_autonomy_mode
-        else settings.models.actor
-    )
+    cfg = settings.models.autonomy_actor
     model_provider = cfg.provider
     model_name = cfg.model_name
 
@@ -146,7 +142,7 @@ is redundant. You already have the latest data. Trust. The. Daemon.""",
             "elapsed_ms": chat_response.total_duration_ms,
             "model": model_name,
             "provider": model_provider,
-            "mode": "autonomy" if settings.orchestrator.use_autonomy_mode else "actor",
+            "mode": "autonomy",
             "cache_read_tokens": cache_read,
             "cache_write_tokens": cache_write,
         }

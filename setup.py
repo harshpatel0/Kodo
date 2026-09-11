@@ -47,9 +47,7 @@ Press ENTER to continue with the setup process
         if self.user_using_provider == "anthropic":
             self.set_anthropic_effort()
 
-        self.setup_orchestrator()
-        if self.user_has_chosen_autonomy_mode:
-            self.setup_autonomy_mode_orchestrator()
+        self.setup_autonomy_mode_orchestrator()
 
         self.introduce_skills()
         self.save_settings()
@@ -73,8 +71,6 @@ The project is also very input token heavy, remember to check how you will be ch
 You can always change the provider in the settings.json file by changing
     active_model_provider (This is the Model Provider that will be used when none is specified)
     models > skill_installation
-    models > planner
-    models > actor
     models > autonomy_actor
 
 Some parameters may not have any effect based on the provider's API usage,
@@ -92,21 +88,21 @@ What provider would you like to use?
 
             if user_provider == "o":
                 self.default_settings["active_model_provider"] = "ollama"
-                for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
+                for key in ("skill_installation", "autonomy_actor"):
                     self.default_settings["models"][key]["provider"] = "ollama"
                 self.user_using_provider = "ollama"
                 break
 
             if user_provider == "a":
                 self.default_settings["active_model_provider"] = "anthropic"
-                for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
+                for key in ("skill_installation", "autonomy_actor"):
                     self.default_settings["models"][key]["provider"] = "anthropic"
                 self.user_using_provider = "anthropic"
                 break
 
             if user_provider == "g":
                 self.default_settings["active_model_provider"] = "google"
-                for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
+                for key in ("skill_installation", "autonomy_actor"):
                     self.default_settings["models"][key]["provider"] = "google"
                 self.user_using_provider = "google"
                 break
@@ -204,7 +200,7 @@ What provider would you like to use?
             model_input = input("Model name: ").strip()
             model_name = model_input if model_input else "qwen2.5-coder:14b"
 
-        for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
+        for key in ("skill_installation", "autonomy_actor"):
             self.default_settings["models"][key]["model_name"] = model_name
 
         print(f"  Using model: {model_name}\n")
@@ -240,7 +236,7 @@ You can always change this per-model in settings.json under models > [role] > th
                 break
             print("Please enter 'y' or 'n'")
 
-        for key in ("skill_installation", "planner", "actor", "autonomy_actor"):
+        for key in ("skill_installation", "autonomy_actor"):
             self.default_settings["models"][key]["thinking"] = thinking
 
         print(f"  Thinking set to: {'enabled' if thinking else 'disabled'}\n")
@@ -295,7 +291,7 @@ Screenshots are recommended
         while True:
             choice = (
                 input(
-                    "Enable screenshots for Actor and Autonomy Modes? ([Y]es / [N]o): "
+                    "Enable screenshots for the Autonomy Actor? ([Y]es / [N]o): "
                 )
                 .lower()
                 .strip()
@@ -311,7 +307,7 @@ Screenshots are recommended
                     )
                     choice = (
                         input(
-                            "Enable screenshots for Actor and Autonomy Modes? ([Y]es / [N]o):"
+                            "Enable screenshots for the Autonomy Actor? ([Y]es / [N]o):"
                         )
                         .lower()
                         .strip()
@@ -330,51 +326,13 @@ Screenshots are recommended
                 break
             print("Please enter 'y' or 'n'")
 
-        for key in ("actor", "autonomy_actor"):
-            self.default_settings["models"][key][
-                "attach_screenshot_of_active_window"
-            ] = screenshot
+        self.default_settings["models"]["autonomy_actor"][
+            "attach_screenshot_of_active_window"
+        ] = screenshot
 
         print(
             f"  Attaching Screenshots of Active Window set to: {'enabled' if screenshot else 'disabled'}\n"
         )
-
-    def setup_orchestrator(self):
-        print(
-            "Would you like to use the Autonomy Mode Orchestrator or the Planner-Actor Orchestrator"
-        )
-        print("""
-Orchestrators are the harnesses that are used to control your model of choice.
-
-Planner-Actor Model
-    The Planner-Actor Mode will first create a plan for the task and then use another instance of the model to follow the plan.
-    The Actor is allowed to deviate from the plan for a few steps incase something goes wrong.
-
-Autonomy Mode Orchestrator
-    This is the new type of orchestrator, skipping the Planner Entirely, the Autonomy Mode Orchestrator would make decisions on it's own.
-""")
-        print("""
-
-Choose your orchestrator, you can always change this in the settings.json file under orchestrator > use_autonomy_mode
-
-    [P]lanner-Actor Model
-    [A]utonomy Mode (Recommended)
-""")
-        while True:
-            user_choice = input("").lower().strip()
-
-            if user_choice == "p":
-                self.default_settings["orchestrator"]["use_autonomy_mode"] = False
-                self.user_has_chosen_autonomy_mode = False
-                break
-            if user_choice == "a":
-                self.default_settings["orchestrator"]["use_autonomy_mode"] = True
-                self.user_has_chosen_autonomy_mode = True
-                break
-
-            print(
-                "The input is incorrect, it can only be 'p' or 'a' for the corresponding mode."
-            )
 
     def setup_autonomy_mode_orchestrator(self):
         print("Iteration Limits")
@@ -422,7 +380,7 @@ Creating a Skill:
     - Communication between skills and the orchestrator
     - Action parameter handling
     - Dynamic context generation
-    - Planner/Actor guidance documents
+    - Actor guidance documents
 
 Refer to existing skills as examples — they all follow the same pattern.
         """)

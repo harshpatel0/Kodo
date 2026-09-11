@@ -32,21 +32,6 @@ default_settings = {
             "temperature": 0.1,
             "keep_alive": 0,
         },
-        "planner": {
-            "provider": "ollama",
-            "model_name": "gemma4:e4b",
-            "thinking": True,
-            "temperature": 0.7,
-            "keep_alive": 0,
-        },
-        "actor": {
-            "provider": "ollama",
-            "model_name": "gemma4:e4b",
-            "thinking": True,
-            "temperature": 0.3,
-            "keep_alive": 30,
-            "attach_screenshot_of_active_window": True,
-        },
         "autonomy_actor": {
             "provider": "ollama",
             "model_name": "gemma4:e4b",
@@ -66,12 +51,7 @@ default_settings = {
     },
     "orchestrator": {
         "action_settle_time": 4,
-        "use_autonomy_mode": True,
-        "planner_architecture": {
-            "max_iterations_per_step": 10,
-            "max_autonomy_steps": 10,
-            "max_replan_loop": 7,
-        },
+        "max_replan_loop": 7,
         "autonomy_orchestrator": {
             "max_total_iterations": 50,
             "toast_notify_history": False,
