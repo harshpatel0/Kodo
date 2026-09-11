@@ -8,7 +8,6 @@ import { appendLog }   from '/static/js/components/log-viewer.js';
 
 export function initRunPage() {
   const taskInput    = document.getElementById('run-task-input');
-  const modeSelect   = document.getElementById('run-mode-select');
   const startBtn     = document.getElementById('run-start-btn');
   const stopBtn      = document.getElementById('run-stop-btn');
   const statusBar    = document.getElementById('run-status-bar');
@@ -36,8 +35,6 @@ export function initRunPage() {
       return;
     }
 
-    const modeOverride = modeSelect?.value || null;
-
     // Clear previous logs
     store.set('runLogs', []);
     store.set('runStatus', 'running');
@@ -47,7 +44,6 @@ export function initRunPage() {
 
     const handle = startRun({
       task,
-      modeOverride: modeOverride === 'default' ? null : modeOverride,
       onMessage(frame) {
         appendLog(frame);
       },

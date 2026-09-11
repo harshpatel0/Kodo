@@ -5,10 +5,7 @@ from settings.settings import settings
 
 from orchestrators.parse_action import parse_action
 
-MAX_ITERATIONS_PER_STEP = (
-    settings.orchestrator.planner_architecture.max_iterations_per_step
-)
-MAX_REPLAN_LOOP = settings.orchestrator.planner_architecture.max_replan_loop
+MAX_REPLAN_LOOP = settings.orchestrator.max_replan_loop
 
 from result_types import PrimitiveActionResult, ActionResult, DirectiveActionResult
 from interactions.direct_app_control.types import *
@@ -45,14 +42,9 @@ def handle_done() -> ActionResult:
 
 
 def handle_stuck(action: dict, iterations: int, in_autonomy: bool) -> ActionResult:
-    if not in_autonomy:
-        logger.info(
-            f"The Actor Model claims it is stuck, running another iteration with added context {iterations+1}/{MAX_ITERATIONS_PER_STEP}"
-        )
-    else:
-        logger.info(
-            "The Actor Model claims it is stuck, running another iteration with added context"
-        )
+    logger.info(
+        "The Actor Model claims it is stuck, running another iteration with added context"
+    )
 
     last_action = action.get("action", "")
     last_args = {k: v for k, v in action.items() if k != "action"}
@@ -86,7 +78,7 @@ def handle_replan(
         )
         hard_exit = True
 
-    logger.info("[STEP_ORCHESTRATOR] Replan requested, overriding instruction.")
+    logger.info("[ACTION_HANDLER] Replan requested, overriding instruction.")
 
     new_context = (
         additional_context
@@ -105,9 +97,7 @@ def handle_replan(
 def handle_retry(
     additional_context: str, error_message: str, action: dict, iterations: int
 ) -> ActionResult:
-    logger.warning(
-        f"[STEP_ORCHESTRATOR] Retrying with added context {iterations}/{MAX_ITERATIONS_PER_STEP}"
-    )
+    logger.warning(f"[ACTION_HANDLER] Retrying with added context (iteration {iterations})")
     user_message = action.get("message", "")
     parts = []
     if user_message:

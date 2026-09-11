@@ -1,3 +1,9 @@
+## Task Structure: Daemon Category (single source of truth for this category)
+
+This layer adds a **Daemon** category to task decomposition: polling, monitoring, or refreshing steps that a background daemon handles instead of you calling them manually every turn.
+
+---
+
 # Daemon Layer
 
 Daemons run a tool call every turn on your behalf and inject fresh results into context. You do not spend an action on it.

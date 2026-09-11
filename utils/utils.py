@@ -66,10 +66,7 @@ from utils.toasts.toast import toaster
 def config_guard() -> None:
     from utils.logger import logger
 
-    use_autonomy_mode = getattr(
-        getattr(settings, "orchestrator", None), "use_autonomy_mode", False
-    )
-    driving_role = "autonomy_actor" if use_autonomy_mode else "actor"
+    driving_role = "autonomy_actor"
 
     role_cfg = getattr(getattr(settings, "models", None), driving_role, None)
     role_provider_name = getattr(role_cfg, "provider", None) if role_cfg else None

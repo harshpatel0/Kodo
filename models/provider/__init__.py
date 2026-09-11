@@ -26,7 +26,7 @@ def get_provider(model_config):
 
     Args:
         model_config: A SimpleNamespace with a required `provider` field
-                      (e.g. settings.models.actor).
+                      (e.g. settings.models.autonomy_actor).
 
     Returns:
         A ModelProvider instance (OllamaProvider, AnthropicProvider, or GoogleProvider).

@@ -187,25 +187,10 @@ def generate_context():
     apps_str = ", ".join(apps)
 
     context = {
-        "planner": f"""## App Launcher - Planner Guide
-### Capability
-You can bypass manual UI navigation by launching apps directly.
-Use this to move the task forward instantly.
-
-### Available Apps on this PC:
-{apps_str}
-
-### Planning Rules
-1. **Validation**: Only plan to open apps listed above. If an app isn't listed, search the web instead.
-2. **State Transition**: A launch step is only 'Done' when the app is confirmed as launched.
-3. **Avoid the Trap**: Never plan a step to 'Click the Start Menu' if the app is in the list above.
-4. **DirectAppControl**: When using DirectAppControl, pass `"background": true` to launch without stealing focus. The action will return the process PID.
-""",
         "actor": f"""## App Launcher - Actor Guide
 
-### AUTONOMY MODE
-If the Planner requests an app name that is slightly different from the grid below
-(e.g., 'Chrome' vs 'Google Chrome'), use your autonomy to select the correct match.
+### Capability
+You can bypass manual UI navigation by launching apps directly. Use this to move the task forward instantly.
 
 ### Installed Apps:
 [{apps_str}]
@@ -215,9 +200,14 @@ If the Planner requests an app name that is slightly different from the grid bel
 
 Set "background": true if the app should launch silently (e.g., when you need its PID for UI interaction without disrupting the user).
 
+### Guidance
+1. **Validation**: Only try to open apps listed above. If an app isn't listed, search the web instead.
+2. **Fuzzy matching**: If the task refers to an app name slightly different from the grid above (e.g., 'Chrome' vs 'Google Chrome'), use your judgement to select the correct match.
+3. **State Transition**: Treat a launch as done only once the app is confirmed as launched -- don't plan to click the Start Menu if the app is in the list above.
+4. **DirectAppControl**: When using DirectAppControl, pass `"background": true` to launch without stealing focus. The action will return the process PID.
+
 ### Recovery Protocol
-If open_app fails: Do NOT retry. Check if the app is already running in the Taskbar.
-If multiple versions exist: Default to the one that matches the Planner's intent.
+If open_app fails: Do NOT retry. Check if the app is already running in the Taskbar. If multiple versions exist: default to the one that best matches the task.
 """,
     }
 

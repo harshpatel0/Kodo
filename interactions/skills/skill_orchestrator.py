@@ -35,7 +35,7 @@ class Skills:
             self._runner._install_packages(packages=packages)
 
     def get_skill_doc(self, skill, consumer):
-        """Gets the skill document for either `consumer`: planner | actor"""
+        """Gets the skill document for the given `consumer` (e.g. 'actor')"""
 
         if not self.has_skill(skill):
             logger.warning(f"Requested skill '{skill}' not found")
@@ -118,9 +118,6 @@ class Skills:
                 "actions": [],
                 "description": None,
                 "accompanies_mcp": None,
-                "has_planner_skill": os.path.exists(
-                    os.path.join(skill_path, "PLANNER_SKILL.md")
-                ),
                 "has_actor_skill": os.path.exists(
                     os.path.join(skill_path, "ACTOR_SKILL.md")
                 ),
@@ -145,9 +142,6 @@ class Skills:
                         skill_entry["dynamic_context"] = True
                         skill_entry["has_actor_skill"] = definition.get(
                             "generated_for_actor"
-                        )
-                        skill_entry["has_planner_skill"] = definition.get(
-                            "generated_for_planner"
                         )
 
                     entry = definition.get("entry", None)
@@ -189,8 +183,6 @@ class Skills:
             status = []
             if skill["executable"]:
                 status.append(f"actions: {', '.join(skill['actions'])}")
-            if skill["has_planner_skill"]:
-                status.append("planner guide")
             if skill["has_actor_skill"]:
                 status.append("actor guide")
             if skill["dynamic_context"]:
@@ -234,7 +226,4 @@ if __name__ == "__main__":
     print(skill_orchestrator.get_skills_summary())
     print(skill_orchestrator.get_available_skills())
     print(skill_orchestrator.can_handle("open_url"))
-    print(
-        skill_orchestrator.load_all_requested_skills(["launch-windows-app"], "planner")
-    )
     print(skill_orchestrator.load_all_requested_skills(["launch-windows-app"], "actor"))
