@@ -15,7 +15,7 @@ LOADING_TEXT = [
     "Counting sheep",
     "Becoming the Number 1 Most Wanted",
     "Speedrunning",
-    "Also try Thio's Universal Agent while we wait",
+    "Also try Thio's Universal Agent.",
     "Ah shit, here we go again",
     "This is a very long loading screen",
     "Checking if Annie is okay",
@@ -43,14 +43,14 @@ LOADING_TEXT = [
     "Consulting the ancient scrolls of Stack Overflow",
     "Asking Jeeves",
     "Feeding the hamsters that power this",
-    "The password to the Louvre is louvre",
+    "The password to the Louvre is louvre.",
 ]
 
 
 def get_loading_text():
     loading_text = random.choice(LOADING_TEXT)
 
-    if not loading_text.endswith("?"):
+    if not loading_text.endswith("?") or not loading_text.endswith("."):
         loading_text = loading_text + "..."
 
     return loading_text
