@@ -202,26 +202,21 @@ class AutonomyOrchestrator:
         actor_skills, installed_skills = self.skill_installation_mode.run(self.task)
 
         self.skills = actor_skills
-        if isinstance(installed_skills, (list, tuple, set)):
-            self.installed_skills = list(installed_skills)
-        elif installed_skills is None:
-            self.installed_skills = []
+        self.installed_skills = list(installed_skills)
+
+        if not self.installed_skills:
             toaster.update("No skills installed for the task", "")
-        else:
-            self.installed_skills = [installed_skills]
+            return
 
-            friendly_skill_names = ""
+        friendly_skill_names = ""
+        for skill in self.installed_skills:
+            skill_name = skill.split("-")
+            skill_str = " ".join(skill_name)
+            friendly_skill_names += skill_str + ""
 
-            for skill in installed_skills:
-                skill_name = skill.split("-")
-                skill_str = " ".join(skill_name)
-
-                friendly_skill_names += skill_str + ""
-
-            toaster.update("Installed the following skills:", friendly_skill_names)
+        toaster.update("Installed the following skills:", friendly_skill_names)
 
     def run(self):
-        CURRENT_MODE = "AUTONOMY"
         toaster.update("Starting Run", "")
 
         directive_section = (
