@@ -94,15 +94,17 @@ import platform
 IS_RUNNING_WINDOWS = platform.system() == "Windows"
 
 AVAILABLE_INTERACTION_LAYERS: list[str] = [
+    # Action Helpers - these define execution semantics (batching, daemons, watchdogs) rather than
+    # app-specific tools, and are listed first so their rules get merged into the prompt right after
+    # the base prompt, ahead of the tool-reference layers below.
+    "daemons",
+    "multi_actions",
+    "watchdog",
     "direct_app_control",
     "mcps",
     "pc_actions",
     "python",
     "skills",
-    # Action Helpers - These are interactions that try to help the LLM in it's task, daemons allow you to run an action in each turn, and multi_actions allow multiple actions to be ran
-    "daemons",
-    "multi_actions",
-    "watchdog",
 ]
 
 TRAY_APP_WIDTH_PERCENTAGE = 55
