@@ -1,15 +1,14 @@
 import os
 import subprocess
 import sys
-import threading
-import time
-import webbrowser
 from pathlib import Path
 import sys
 import bootstrapper
 
 from utils import check_layer
 from utils import toaster
+
+from settings import settings
 
 
 from utils.globals import (
@@ -42,14 +41,6 @@ def _run_under_venv():
         return False
 
     sys.exit(subprocess.call([str(venv_python)] + sys.argv))
-
-
-def _open_browser_delayed(url: str, delay: float = 3.5):
-    def _open():
-        time.sleep(delay)
-        webbrowser.open_new(url)
-
-    threading.Thread(target=_open, daemon=True).start()
 
 
 if __name__ == "__main__":
@@ -99,7 +90,10 @@ if __name__ == "__main__":
             uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
 
         # Deprecate the built in Web UI for the other one at KodoFrontend.
-        webview_port = WEB_PORT if WEB_PORT else API_PORT
+        web_port = settings.tray_app.web_ui_port
+        webview_port = web_port if web_port else API_PORT  # The port used by the tray
+
+        # This change is being made because the built in WebUI will be deprecated soon.
 
         from screeninfo import get_monitors
 
@@ -107,8 +101,13 @@ if __name__ == "__main__":
         screen_width = primary_monitor.width
         screen_height = primary_monitor.height
 
-        win_width = int(screen_width * (TRAY_APP_WIDTH_PERCENTAGE / 100))
-        win_height = int(screen_height * (TRAY_APP_HEIGHT_PERCENTAGE / 100))
+        tray_app_width_percentage = settings.tray_app.width_percentage
+        tray_app_height_percentage = settings.tray_app.height_percentage
+        tray_app_x_position_percentage = settings.tray_app.x_position_percentage
+        tray_app_y_position_percentage = settings.tray_app.y_position_percentage
+
+        win_width = int(screen_width * (tray_app_width_percentage / 100))
+        win_height = int(screen_height * (tray_app_height_percentage / 100))
 
         win = webview.create_window(
             "Kodo",
@@ -116,14 +115,15 @@ if __name__ == "__main__":
             frameless=True,
             width=win_width,
             height=win_height,
-            x=int((screen_width - win_width) * (TRAY_APP_X_POSITION_PERCENTAGE / 100)),
+            x=int((screen_width - win_width) * (tray_app_x_position_percentage / 100)),
             y=int(
-                (screen_height - win_height) * (TRAY_APP_Y_POSITION_PERCENTAGE / 100)
+                (screen_height - win_height) * (tray_app_y_position_percentage / 100)
             ),
             hidden=True,
             resizable=True,
             easy_drag=True,
         )
+
         win.expose(WindowAPI(win).on_blur)  # type: ignore
         win.events.loaded += lambda: _inject_blur_listener(win)  # type: ignore
         win.events.loaded += lambda: mark_as_tray_app(win)  # type: ignore
