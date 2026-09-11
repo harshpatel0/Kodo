@@ -54,7 +54,7 @@ That said, I am not personally collecting your PC information, the data collecte
     }
   },
   "models": {
-    "actor": {
+    "autonomy_actor": {
       "provider": "ollama",
       "model_name": "gemma4:e4b",
       "temperature": 0.5,
@@ -138,6 +138,57 @@ Then configure:
 Google has said they will use model requests made on the Free Tier to train their models, including human review. Please do not send sensitive data, absolutely no data masking occurs when it is sent to Google, Google will see your active window, a screenshot of your desktop, and your taskbar. If you can't trust an outside provider. Please use Ollama.
 
 The project is still in development, uses a lot of input tokens and requires reasoning, this is all intensive for your model, and so, you would be billed accordingly if using a paid plan.
+
+### Claude Code (CLI)
+
+Unlike the other providers, this one doesn't call an HTTP API directly or need an API key from Kodo's side. It uses `claude` CLI (`claude -p ...`) and uses whatver user is logged into on this machine.
+
+To use the Claude Code Provider, first install Claude and make sure you can access it using `claude`
+
+```bash
+npm install -g @anthropic-ai/claude-code
+claude
+```
+
+Run it and go through the login steps.
+
+Then configure Kodo:
+
+```json
+{
+  "model_providers": {
+    "claude_code": {
+      "cli_path": "claude",
+      "timeout": 120,
+      "effort": "low",
+      "model": "sonnet"
+    }
+  },
+  "models": {
+    "autonomy_actor": {
+      "provider": "claude-code",
+      "model_name": "sonnet",
+      "temperature": 0.5
+    }
+  }
+}
+```
+
+`model_name` must be one of the CLI's aliases (`haiku`, `sonnet`, `opus`, `fable`) or a full model name (not one in Anthropic's Claude API Docs). Leave it blank on a role to fall back to `model_providers.claude_code.model`. 
+
+`effort` (`low`, `medium`, `high`, `xhigh`, `max`) is provider-level, same reasoning as Anthropic's own `effort` setting above.
+
+#### How it differs from every other provider here
+
+- **No `api_key_env_var`.** There's nothing to set. Whatever `claude` is logged into is what runs. If you've never logged in, `ClaudeCodeProvider` raises immediately at startup telling you so, same as Anthropic/Google do when their key env var is unset.
+- **`temperature` and `max_tokens` are ignored.** The CLI doesn't expose sampling controls the way an API does.
+- **No thinking text.** Token counts for thinking are available, but not the thinking content itself — `response.thinking` is always `None` through this provider.
+- **Slower per turn.** Every call spawns a fresh `claude` process; expect meaningfully more latency than a direct HTTP request to the other providers.
+
+**Billed against your subscription's usage, not a separate per-token budget.**
+Running Kodo through this eats into the same Pro/Max usage window that Claude Code sessions use.
+
+**If you have enabled usage credits it will go through those too!!**
 
 ---
 

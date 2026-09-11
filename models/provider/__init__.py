@@ -16,6 +16,7 @@ from .ollama_provider import OllamaProvider
 from .anthropic_provider import AnthropicProvider
 from .google_provider import GoogleProvider
 from .openai_compatible_provider import OpenAICompatibleProvider
+from .claude_code_provider import ClaudeCodeProvider
 from settings.settings import settings
 
 _PROVIDER_CACHE: dict[str, ModelProvider] = {}
@@ -45,6 +46,7 @@ def get_provider(model_config):
         "anthropic": _create_anthropic_provider,
         "google": _create_google_provider,
         "openai-compatible": _create_openai_compatible_provider,
+        "claude-code": _create_claude_code_provider,
     }
 
     if provider_name not in factory_map:
@@ -103,4 +105,14 @@ def _create_openai_compatible_provider() -> OpenAICompatibleProvider:
         api_key_env_var=getattr(cfg, "api_key_env_var", "OPENAI_COMPATIBLE_API_KEY"),
         base_url=getattr(cfg, "base_url", None),
         use_caching=_get_use_caching(cfg),
+    )
+
+
+def _create_claude_code_provider() -> ClaudeCodeProvider:
+    cfg = getattr(settings.model_providers, "claude_code", None)
+    return ClaudeCodeProvider(
+        cli_path=getattr(cfg, "cli_path", "claude"),
+        timeout=getattr(cfg, "timeout", 120),
+        effort=getattr(cfg, "effort", "low"),
+        model=getattr(cfg, "model", "sonnet"),
     )

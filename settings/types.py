@@ -42,11 +42,19 @@ class OpenAICompatibleProviderSettings:
     use_caching: bool
 
 
+class ClaudeCodeProviderSettings:
+    cli_path: str
+    timeout: int
+    effort: str
+    model: str
+
+
 class ModelProvidersSettings:
     ollama: OllamaProviderSettings
     anthropic: AnthropicProviderSettings
     google: GoogleProviderSettings
     openai_compatible: OpenAICompatibleProviderSettings
+    claude_code: ClaudeCodeProviderSettings
 
 
 class SkillInstallationModelSettings:

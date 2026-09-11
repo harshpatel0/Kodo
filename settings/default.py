@@ -24,6 +24,12 @@ default_settings = {
             "base_url": None,
             "use_caching": False,
         },
+        "claude_code": {
+            "cli_path": "claude",
+            "timeout": 120,
+            "effort": "low",
+            "model": "sonnet",
+        },
     },
     "models": {
         "skill_installation": {
