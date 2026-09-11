@@ -5,6 +5,7 @@ from pathlib import Path
 from screeninfo import get_monitors
 
 from settings import settings
+from server.run_tracker import teardown_all
 
 ROOT_DIR = Path(__file__).resolve().parent
 
@@ -38,6 +39,7 @@ class WindowAPI:
         if self.icon is not None:
             self.icon.stop()
         self.window.destroy()
+        teardown_all()
 
     def minimise(self):
         self.window.minimize()
@@ -64,6 +66,7 @@ def _toggle_window(window):
 def _exit_app(icon, window):
     icon.stop()
     window.destroy()
+    teardown_all()
 
 
 def start_tray(window, api=None):

@@ -28,6 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from orchestrator import run_externally
 from settings.settings import settings
+from server import run_tracker
 
 import time
 from fastapi.responses import StreamingResponse
@@ -35,7 +36,6 @@ from mss import mss
 import cv2
 import numpy as np
 
-import ctypes
 import threading
 
 from utils.loading_text import get_loading_text
@@ -95,24 +95,6 @@ async def _broadcast(record: dict):
             _subscribers.discard(ws)
 
 
-def _kill_thread(thread_id: int):
-    """Raise SystemExit in a running thread by its OS thread ID.
-    Uses a safer two-call pattern to avoid corrupting thread state.
-    """
-    if thread_id == threading.current_thread().ident:
-        return
-
-    ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        ctypes.c_ulong(thread_id),
-        ctypes.py_object(SystemExit),
-    )
-
-    ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        ctypes.c_ulong(thread_id),
-        ctypes.c_long(0),
-    )
-
-
 @app.websocket("/run/")
 async def run(
     websocket: WebSocket,
@@ -165,14 +147,11 @@ async def _run_task(websocket: WebSocket, task: str):
     loop = asyncio.get_running_loop()
     stream = LogStream(loop)
 
-    # We need the thread ID from inside the thread itself
-    thread_id_holder: list[int] = []
-    thread_id_ready = asyncio.Event()
+    thread_registered = asyncio.Event()
 
     def _run_with_stream_and_id(task, stream):
-        # Capture the OS thread ID before doing any work
-        thread_id_holder.append(threading.current_thread().ident)
-        loop.call_soon_threadsafe(thread_id_ready.set)
+        run_tracker.register_thread(threading.current_thread().ident)
+        loop.call_soon_threadsafe(thread_registered.set)
 
         stream.attach()
         web_emitter.attach(stream)
@@ -180,15 +159,16 @@ async def _run_task(websocket: WebSocket, task: str):
         try:
             run_externally(task=task)
         except SystemExit:
-            pass  # clean exit from _kill_thread
+            pass  # clean exit from run_tracker.teardown_agent()
         finally:
             stream.detach()
             web_emitter.detach()
+            run_tracker.clear_thread()
 
     future = loop.run_in_executor(None, _run_with_stream_and_id, task, stream)
 
-    # Wait until the thread has registered its ID before we start streaming
-    await thread_id_ready.wait()
+    # Wait until the thread has registered itself before we start streaming
+    await thread_registered.wait()
 
     # The starter socket is the Stop control: if it goes away, request a stop.
     # The task itself keeps running and its records keep streaming to everyone
@@ -200,7 +180,7 @@ async def _run_task(websocket: WebSocket, task: str):
             while True:
                 await websocket.receive()
         except Exception:
-            _kill_thread(thread_id_holder[0])
+            run_tracker.teardown_agent()
             disconnected.set()
 
     watcher = asyncio.create_task(watch_starter())

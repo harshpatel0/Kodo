@@ -3,6 +3,7 @@ import subprocess
 import sys
 import os
 import tempfile
+import threading
 import venv
 import json
 
@@ -16,8 +17,27 @@ VENV_DIR = os.path.join(
 from utils.logger import logger
 from settings.settings import settings
 
+# Tracks every subprocess currently spawned by execute_code(), across all PythonRunner
+# instances (there are several -- one per skill_orchestrator, one in parse_action, etc).
+# A blocking Popen.communicate() can't be interrupted by killing its calling thread, so a
+# full teardown (app exit, stop button) needs a handle to actually kill the child process.
+_running_processes: set[subprocess.Popen] = set()
+_running_processes_lock = threading.Lock()
+
 
 class PythonRunner:
+
+    @staticmethod
+    def kill_all_running() -> None:
+        """Force-kill every subprocess currently tracked. Best-effort -- used for a full
+        teardown, not for normal completion (which already cleans up after itself)."""
+        with _running_processes_lock:
+            processes = list(_running_processes)
+        for process in processes:
+            try:
+                process.kill()
+            except Exception:
+                pass
 
     def __init__(self):
         self.venv_dir = VENV_DIR
@@ -116,12 +136,17 @@ class PythonRunner:
     def execute_code(self, command, timeout=None) -> KodoSkillResult:
         if timeout is None:
             timeout = self._get_timeout()
+
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        with _running_processes_lock:
+            _running_processes.add(process)
+
         try:
-            result = subprocess.run(
-                command, capture_output=True, text=True, timeout=timeout
-            )
-            output = result.stdout.strip()
-            errors = result.stderr.strip()
+            output, errors = process.communicate(timeout=timeout)
+            output = output.strip()
+            errors = errors.strip()
 
             logger.info(f"Output: {output}")
             logger.warning(f"Errors: {errors}")
@@ -131,10 +156,7 @@ class PythonRunner:
             else:
                 logger.warning(f"stderr: {errors}\nstdout: {output}")
 
-            if errors != "No errors":
-                result = "ERROR"
-            else:
-                result = "SUCCESS"
+            result = "ERROR" if errors != "No errors" else "SUCCESS"
             logger.info("Code ran successfully with no output.")
 
             return KodoSkillResult(
@@ -142,18 +164,24 @@ class PythonRunner:
             )
 
         except subprocess.TimeoutExpired as e:
+            process.kill()
+            output, errors = process.communicate()
             return KodoSkillResult(
                 result="TIMEOUT",
-                skill_output=output if output else "",
-                skill_errors=f"{errors}\tTimeout Exception: {str(e)}",
+                skill_output=output.strip() if output else "",
+                skill_errors=f"{errors.strip() if errors else ''}\tTimeout Exception: {str(e)}",
             )
 
         except Exception as e:
             return KodoSkillResult(
                 result="PY_EXCEPTION",
-                skill_output=output if output else "",
+                skill_output="",
                 skill_errors=str(e),
             )
+
+        finally:
+            with _running_processes_lock:
+                _running_processes.discard(process)
 
     def run_skill_by_path(self, entry_path, args=None):
         with open(entry_path, "r", encoding="utf-8") as file:

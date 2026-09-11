@@ -28,6 +28,18 @@ class MCPRegistry:
 
         return tool_exists
 
+    def disconnect_all(self) -> None:
+        """Best-effort teardown of every connected MCP server's subprocess/session. Used
+        on full app exit -- otherwise stdio-spawned MCP server processes would be
+        orphaned when the main process hard-exits."""
+        from interactions.mcps.mcp_loop import run_async
+
+        for name, client in list(self._clients.items()):
+            try:
+                run_async(client.disconnect())
+            except Exception as e:
+                logger.warning(f"Failed to disconnect MCP server '{name}': {e}")
+
     def get_tool_schemas(self) -> str:
         if not self._tools:
             return ""
