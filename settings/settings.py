@@ -1,21 +1,33 @@
 import json
 from types import SimpleNamespace
-from typing import Any
 
 from settings.default import default_settings
+from settings.types import (
+    CachingSettings,
+    ContextProviderSettings,
+    DirectAppControlSettings,
+    InteractionsSettings,
+    ModelProvidersSettings,
+    ModelsSettings,
+    OrchestratorSettings,
+    SkillsSettings,
+    WebUISettings,
+)
 
 
 class Settings:
-    orchestrator: Any
-    context_provider: Any
-    models: Any
-    model_providers: Any
-    skills: Any
-    interactions: Any
+    orchestrator: OrchestratorSettings
+    context_provider: ContextProviderSettings
+    models: ModelsSettings
+    model_providers: ModelProvidersSettings
+    skills: SkillsSettings
+    interactions: InteractionsSettings
     active_model_provider: str
     log_to_file: bool
-    web_ui: Any
-    direct_app_control: Any
+    web_ui: WebUISettings
+    direct_app_control: DirectAppControlSettings
+    caching: CachingSettings
+    data: dict
 
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
