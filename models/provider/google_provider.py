@@ -7,6 +7,8 @@ from .base import ModelProvider, ChatMessage, ChatResponse, determine_caching
 from utils.logger import logger
 from settings.settings import settings
 
+from utils import toaster
+
 
 def _extract_status_code(err: Exception) -> int | None:
     for attr in ("code", "status_code", "grpc_status_code"):
@@ -170,20 +172,32 @@ class GoogleProvider(ModelProvider):
                 last_error = e
                 status_code = _extract_status_code(e)
                 if status_code == 503:
+                    toaster.update(
+                        "Model currently unavailable",
+                        "Google AI is currently in high demand and the next action can't be generated right now.",
+                    )
                     logger.warning(
-                        f"Google AI is temporarily unavailable, the model might be in high demand and currenly unavailable."
+                        f"Google AI is temporarily unavailable, the model might be in high demand and currenly unavailable. "
                         f"Waiting 60 seconds before retry (attempt {attempt+1}/3)..."
                     )
                     time.sleep(60)
                     continue
                 if status_code == 429:
+                    toaster.update(
+                        "Model currently unavailable",
+                        "We have exceeded the rate limit for your Google AI account and the next action can't be generated right now.",
+                    )
                     logger.warning(
-                        f"Google AI API rate limit exceeded. Waiting 10 seconds before retry (attempt {attempt+1}/3)..."
+                        f"Google AI API rate limit exceeded. Waiting 10 seconds before retry (attempt {attempt+1}/3)... "
                     )
                     time.sleep(10)
                     continue
                 logger.error(
                     f"Google AI API error (HTTP {status_code or 'unknown'}): {e}"
+                )
+                toaster.update(
+                    "Model currently unavailable",
+                    f"We got a {status_code} error from Google AI",
                 )
                 raise
         else:
