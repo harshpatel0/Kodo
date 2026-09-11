@@ -30,9 +30,11 @@ class DirectAppControlHandler:
         self.direct_app_controller = DirectAppController()
 
     def is_app_connected(self) -> bool:
-        if self.direct_app_controller.application:
+        app = self.direct_app_controller.application
+        if app is not None and app.is_process_running():
             return True
-        return False
+        else:
+            return False
 
     def list_process_str(self) -> str:
         result = self.direct_app_controller.list_controls_diff()
@@ -44,7 +46,11 @@ class DirectAppControlHandler:
         return self.direct_app_controller.connected_pid  # type: ignore
 
     def return_app_window(self) -> str:
-        return self.direct_app_controller.application.top_window().window_text()  # type: ignore
+        try:
+            return self.direct_app_controller.application.top_window().window_text()  # type: ignore
+        except RuntimeError:
+            self.direct_app_controller.application = None
+            return "Application was closed or crashed unexpectedly."
 
     def handle_direct_action(self, action: dict):
         previous_fg = _save_foreground()
