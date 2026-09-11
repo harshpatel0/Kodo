@@ -77,5 +77,12 @@ default_settings = {
         "desktop_streaming_quality_percentage": 85,
         "desktop_streaming_frame_rate": 30,
     },
+    "tray_app": {
+        "width_percentage": 55,
+        "height_percentage": 28,
+        "x_position_percentage": 50,
+        "y_position_percentage": 15,
+        "web_ui_port": 3173,
+    },
     "log_to_file": True,
 }
