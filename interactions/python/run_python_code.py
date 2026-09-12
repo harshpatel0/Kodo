@@ -101,8 +101,8 @@ class PythonRunner:
                 not in result.stderr
             ):
                 return {
-                    "result": "NOT_RUN",
-                    "message": "Could not install packages from Pip into venv",
+                    "result": "CANNOT_RUN",
+                    "message": "Could not install packages from Pip into virtual environment. The skill may be broken and cannot be used in this session.",
                 }
             # If a dependency could not be found ignore it, as it could be a dependency that has a different name, dependencies like that should be defined in skill.json
 
