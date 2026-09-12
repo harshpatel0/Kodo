@@ -29,6 +29,9 @@ default_settings = {
             "timeout": 120,
             "effort": "low",
             "model": "sonnet",
+            "fallback_model": None,
+            "run_bare": False,
+            "claude_code_api_key_env_var": "CLAUDE_CODE_API_KEY",
         },
     },
     "models": {

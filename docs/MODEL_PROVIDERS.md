@@ -180,7 +180,6 @@ Then configure Kodo:
 
 #### How it differs from every other provider here
 
-- **No `api_key_env_var`.** There's nothing to set. Whatever `claude` is logged into is what runs. If you've never logged in, `ClaudeCodeProvider` raises immediately at startup telling you so, same as Anthropic/Google do when their key env var is unset.
 - **`temperature` and `max_tokens` are ignored.** The CLI doesn't expose sampling controls the way an API does.
 - **No thinking text.** Token counts for thinking are available, but not the thinking content itself — `response.thinking` is always `None` through this provider.
 - **Slower per turn.** Every call spawns a fresh `claude` process; expect meaningfully more latency than a direct HTTP request to the other providers.
@@ -189,6 +188,52 @@ Then configure Kodo:
 Running Kodo through this eats into the same Pro/Max usage window that Claude Code sessions use.
 
 **If you have enabled usage credits it will go through those too!!**
+
+You can specify a different model for Skill Installation Mode, I recommend using Haiku for Skill Installation as it really does not do much work.
+
+``` json
+  "models": {
+    "skill_installation": {
+      "provider": "claude-code",
+      "model_name": "haiku",
+      "temperature": 0.1,
+      "keep_alive": 0
+    },
+    "autonomy_actor": {
+      "provider": "claude-code",
+      "model_name": "sonnet",
+      "thinking": true,
+      "temperature": 0.5,
+      "keep_alive": 150,
+      "attach_screenshot_of_active_window": false
+    }
+```
+
+You can run Claude Code in `bare` mode, which strips away extra features added by Anthropic for Claude Code, including tools. Claude says it would cut down on the time taken for a response as well as the tokens required, though I can't test this.
+If you are using it in `bare`, I recommend switching instead to using the Anthropic Provider since you get more granular control, the same features, and a readout of the thinking of the model. If you would like to use it in bare mode, then set the `run_bare` setting to true, specify the key in the `.env` file belongs to your Anthropic API key, and then, set your key in your `.env` file.
+
+| Model  | Effort | --bare | Input tok | Output tok (est.) | Total tok | % Pro/5hr* | % Max 5x/5hr* | Speed /10 | Effectiveness /10 |
+| ------ | ------ | ------ | --------: | ----------------: | --------: | ---------: | ------------: | --------: | ----------------: |
+| Haiku  | low    | on     |     6,600 |                60 |     6,660 |       4.9% |          1.0% |        10 |                 4 |
+| Haiku  | low    | off    |     8,100 |                60 |     8,160 |       6.0% |          1.2% |         9 |                 4 |
+| Haiku  | medium | on     |     6,600 |               180 |     6,780 |       5.0% |          1.0% |         9 |                 5 |
+| Haiku  | medium | off    |     8,100 |               180 |     8,280 |       6.1% |          1.2% |         8 |                 5 |
+| Haiku  | high   | on     |     6,600 |               350 |     6,950 |       5.1% |          1.0% |         8 |                 6 |
+| Haiku  | high   | off    |     8,100 |               350 |     8,450 |       6.3% |          1.3% |         7 |                 6 |
+| Sonnet | low    | on     |     6,600 |                80 |     6,680 |       4.9% |          1.0% |         7 |                 7 |
+| Sonnet | low    | off    |     8,100 |                80 |     8,180 |       6.1% |          1.2% |         6 |                 7 |
+| Sonnet | medium | on     |     6,600 |               400 |     7,000 |       5.2% |          1.0% |         5 |                 8 |
+| Sonnet | medium | off    |     8,100 |               400 |     8,500 |       6.3% |          1.3% |         4 |                 8 |
+| Sonnet | high   | on     |     6,600 |             1,200 |     7,800 |       5.8% |          1.2% |         3 |                 9 |
+| Sonnet | high   | off    |     8,100 |             1,200 |     9,300 |       6.9% |          1.4% |         3 |                 9 |
+| Opus   | low    | on     |     6,600 |               100 |     6,700 |       5.0% |          1.0% |         4 |                 8 |
+| Opus   | low    | off    |     8,100 |               100 |     8,200 |       6.1% |          1.2% |         3 |                 8 |
+| Opus   | medium | on     |     6,600 |               600 |     7,200 |       5.3% |          1.1% |         3 |                 9 |
+| Opus   | medium | off    |     8,100 |               600 |     8,700 |       6.4% |          1.3% |         2 |                 9 |
+| Opus   | high   | on     |     6,600 |             2,000 |     8,600 |       6.4% |          1.3% |         1 |                10 |
+| Opus   | high   | off    |     8,100 |             2,000 |    10,100 |       7.5% |          1.5% |         1 |                10 |
+
+*Pro assumed at ~135,000 tokens/5hr session (45 msgs × 3,000 tok/msg, both unofficial estimates); Max 5x scaled ×5 from that. Max 20x would be roughly a quarter of the Max 5x column.*
 
 ---
 

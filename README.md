@@ -375,7 +375,8 @@ Task
   -> SkillInstallationMode
   -> AutonomyOrchestrator
   -> ActorModel (per turn) (reads UI tree, emits one action, updates history)
-  -> PCActions / Skills
+  -> Action Parser
+    -> Interaction Layer
 ```
 
 The actor runs in a free loop without an upfront plan and a `history` string as its working memory across turns. Each turn the model reads the live UI state, reasons about what to do next, acts, and appends a one-line summary to the history.

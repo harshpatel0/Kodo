@@ -47,6 +47,9 @@ class ClaudeCodeProviderSettings:
     timeout: int
     effort: str
     model: str
+    run_bare: bool
+    fallback_model: str | None
+    claude_code_api_key_env_var: str | None
 
 
 class ModelProvidersSettings:

@@ -47,13 +47,16 @@ def _kill_thread(thread_id: int) -> None:
 
 def teardown_agent() -> None:
     """Best-effort teardown of whatever the orchestrator is currently doing: kill any
-    subprocess a skill/python action spawned (a blocking subprocess.communicate() won't
+    subprocess a skill/python action spawned, and any in-flight `claude` CLI call the
+    claude-code model provider is blocked on (a blocking subprocess.communicate() won't
     notice the thread-kill below until it returns on its own), then interrupt the
     orchestrator's own thread. Safe to call even when nothing is running.
     """
     from interactions.python.run_python_code import PythonRunner
+    from models.provider.claude_code_provider import ClaudeCodeProvider
 
     PythonRunner.kill_all_running()
+    ClaudeCodeProvider.kill_all_running()
 
     if _active_thread_id is not None:
         _kill_thread(_active_thread_id)
