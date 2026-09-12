@@ -59,9 +59,9 @@ def create_file(path, content=None):
 
     if content:
         file_path.write_text(content, encoding="utf-8")
-        print("Created and written")
+        print(f"Created and written to {str(path)}")
     else:
-        print("Created")
+        print(f"Created to {str(path)}")
 
 
 def write_to_file(path, content):
@@ -75,7 +75,7 @@ def write_to_file(path, content):
     file_path = Path(path)
     try:
         file_path.write_text(content, encoding="utf-8")
-        print("Written")
+        print(f"Written to {str(path)}")
     except Exception as e:
         print(f"Could not write to file: {e}", file=sys.__stderr__)
 
@@ -86,7 +86,7 @@ def read_file(path):
         content = file_path.read_text(encoding="utf-8")
         print(f"File contents\n{content}")
     except Exception as e:
-        print(f"Could not read file: {e}", file=sys.__stderr__)
+        print(f"Could not read {str(path)}: {e}", file=sys.__stderr__)
 
 
 def append_file(path, content):
@@ -95,16 +95,16 @@ def append_file(path, content):
     try:
         with open(file_path, "a", encoding="utf-8") as file:
             file.write(content)
-            print("Appended to file successfully")
+            print(f"Appended to {str(path)} successfully")
     except Exception as e:
-        print(f"Could not append to file: {e}", file=sys.__stderr__)
+        print(f"Could not append to {str(path)}: {e}", file=sys.__stderr__)
 
 
 def present_file(path):
     file_path = Path(path)
     os.startfile(file_path)
 
-    print("Presented (opened the file with the system default app)")
+    print(f"Presented {str(path)} (opened the file with the system default app)")
 
 
 def delete_file(path):
@@ -140,8 +140,10 @@ if __name__ == "__main__":
     file_path = args.get("file_path") or args.get("path")
 
     if not file_path:
-        print("No file path provided. Accepted keys: 'file_path' or 'path'.",
-              file=sys.__stderr__)
+        print(
+            "No file path provided. Accepted keys: 'file_path' or 'path'.",
+            file=sys.__stderr__,
+        )
         sys.exit(1)
 
     file_path = parse_path(file_path)
