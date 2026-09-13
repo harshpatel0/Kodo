@@ -113,7 +113,13 @@ VALID_MODELS = ["haiku", "sonnet", "opus", "fable", "mythos"]
 
 
 def _resolve_claude_code_model(model_str: str) -> dict["str", "str"]:
-    model, effort = model_str.split(":")
+    if ":" not in model_str:
+        raise ValueError(
+            f"'{model_str}' is not a valid model string. Expected the form "
+            f"'<model>:<effort>', e.g. 'sonnet:low'."
+        )
+
+    model, effort = model_str.split(":", 1)
 
     if model not in VALID_MODELS:
         raise ValueError(f"{model} is not a valid model.")
@@ -127,9 +133,19 @@ def _resolve_claude_code_model(model_str: str) -> dict["str", "str"]:
 def _create_claude_code_provider() -> ClaudeCodeProvider:
     cfg = getattr(settings.model_providers, "claude_code", None)
 
-    resolved_model = _resolve_claude_code_model(
-        model_str=getattr(cfg, "model", "sonnet:low"),
-    )
+    model_str = getattr(cfg, "model", None) or "sonnet:low"
+    legacy_effort = getattr(cfg, "effort", None)
+    if ":" not in model_str and legacy_effort:
+        from utils import logger
+
+        logger.warning(
+            f"Config: model_providers.claude_code.model ('{model_str}') is in the "
+            f"pre-migration split format. Combining with effort '{legacy_effort}' "
+            f"into '{model_str}:{legacy_effort}'. Update settings.json to silence this."
+        )
+        model_str = f"{model_str}:{legacy_effort}"
+
+    resolved_model = _resolve_claude_code_model(model_str=model_str)
 
     return ClaudeCodeProvider(
         cli_path=getattr(cfg, "cli_path", "claude"),

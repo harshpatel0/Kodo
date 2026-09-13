@@ -6,9 +6,9 @@ import threading
 import time
 
 from .base import ModelProvider, ChatMessage, ChatResponse
-from utils.logger import logger
 from settings.settings import settings
 
+from utils import logger
 from utils import toaster
 
 _ARGV_BUDGET_CHARS = 4_000
@@ -153,6 +153,15 @@ class ClaudeCodeProvider(ModelProvider):
                 f"[ClaudeCliProvider] ignoring unknown settings: {sorted(unused)}"
             )
 
+    def _split_model_and_effort(self, model: str | None) -> tuple[str, str]:
+        model = model or self.default_model
+
+        if ":" in model:
+            resolved_model, resolved_effort = model.split(":", 1)
+            return resolved_model, resolved_effort
+
+        return model, self.effort
+
     def chat(
         self,
         messages: list[ChatMessage],
@@ -163,7 +172,7 @@ class ClaudeCodeProvider(ModelProvider):
     ) -> ChatResponse:
 
         timer_start = time.monotonic()
-        model = model or self.default_model
+        model, effort = self._split_model_and_effort(model)
 
         system_text, turns, dropped_images = self._split_messages(messages)
 
@@ -182,7 +191,7 @@ class ClaudeCodeProvider(ModelProvider):
         prompt = self._build_prompt(turns)
         self._warn_if_oversized(system_text, prompt)
 
-        payload = self._run_with_retries(model, system_path, prompt)
+        payload = self._run_with_retries(model, effort, system_path, prompt)
 
         content = (payload.get("result") or "").strip()
         content = _try_pass_cli_json(content)
@@ -283,7 +292,7 @@ class ClaudeCodeProvider(ModelProvider):
     # Claude Code call
 
     def _create_claude_code_command(
-        self, model: str, system_path: str | None
+        self, model: str, effort: str, system_path: str | None
     ) -> list[str]:
         command = self._argv_prefix + [
             "-p",
@@ -298,7 +307,7 @@ class ClaudeCodeProvider(ModelProvider):
         if system_path:
             command += ["--system-prompt-file", system_path]
 
-        for flag, args in self._optional_flags().items():
+        for flag, args in self._optional_flags(effort).items():
             if flag not in self._disabled_flags:
                 command += args
 
@@ -312,10 +321,10 @@ class ClaudeCodeProvider(ModelProvider):
 
         return command
 
-    def _optional_flags(self) -> dict[str, list[str]]:
+    def _optional_flags(self, effort: str) -> dict[str, list[str]]:
         flags = {
             "--permission-prompts": ["--permission-prompts", "none"],
-            "--effort": ["--effort", self.effort],
+            "--effort": ["--effort", effort],
         }
 
         if settings.model_providers.claude_code.fallback_model:
@@ -353,14 +362,14 @@ class ClaudeCodeProvider(ModelProvider):
         return env
 
     def _run_with_retries(
-        self, model: str, system_path: str | None, prompt: str
+        self, model: str, effort: str, system_path: str | None, prompt: str
     ) -> dict:
         last_error: Exception | None = None
         attempt = 0
 
         while attempt < self.max_retries:
             try:
-                return self._run_once(model, system_path, prompt)
+                return self._run_once(model, effort, system_path, prompt)
             except _UnsupportedFlagError as e:
                 # Does not consume an attempt: the call never reached the model,
                 # and the flag set is finite so this cannot spin.
@@ -388,12 +397,14 @@ class ClaudeCodeProvider(ModelProvider):
 
             except Exception as e:
                 logger.error(f"[ClaudeCliProvider] CLI call failed: {e}")
+                self._drop_session("Failed to call model")
                 toaster.update(
                     "Model currently unavailable",
                     "The Claude Code CLI returned an error.",
                 )
                 raise
 
+        self._drop_session(f"Kept failing after {self.max_retries} attempts")
         toaster.update(
             "Model currently unavailable",
             f"Claude Code failed after {self.max_retries} attempts.",
@@ -402,9 +413,20 @@ class ClaudeCodeProvider(ModelProvider):
             f"claude CLI request failed after {self.max_retries} retries"
         )
 
-    def _run_once(self, model: str, system_path: str | None, prompt: str) -> dict:
+    def _drop_session(self, reason: str) -> None:
+        if self.session_id:
+            # Drops sessions that just leave the model confused.
+            logger.warning(
+                f"[ClaudeCliProvider] dropping session {self.session_id} because "
+                f"{reason}; the next call will start a new session."
+            )
+            self.session_id = None
+
+    def _run_once(
+        self, model: str, effort: str, system_path: str | None, prompt: str
+    ) -> dict:
         process = subprocess.Popen(
-            self._create_claude_code_command(model, system_path),
+            self._create_claude_code_command(model, effort, system_path),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -472,7 +494,7 @@ class ClaudeCodeProvider(ModelProvider):
 
     def _raise_for_detail(self, detail: str, context: str) -> None:
         if _unknown_flag(detail):
-            for flag in self._optional_flags():
+            for flag in self._optional_flags(self.effort):
                 if flag in detail and flag not in self._disabled_flags:
                     raise _UnsupportedFlagError(flag, detail)
 
