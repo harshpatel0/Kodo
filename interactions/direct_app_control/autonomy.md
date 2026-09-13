@@ -50,6 +50,7 @@ Re-`connect` to switch apps freely, no disconnect needed.
 - **Structural containers (Pane/Group/wrapper Window/Custom) are pre-filtered** from `list_controls` — don't target them.
 - **Focus:** all patterns here are focus-neutral by spec; some browser `Invoke` providers may steal focus anyway — if seen, prefer `Select` on the ListItem, or `set_value` on the parent ComboBox. Genuine focus-required input → fall back to `pc_actions`.
 - **Infeasible-without-focus task:** don't force it through `pc_actions` as workaround here — toast the detail, `done` early.
+- **Waiting on content to load/refresh** (e.g. search results populating, a list filling in after typing): don't manually re-`list_controls` every turn — `create_daemon` with `{"action": "list_controls"}` once and read the fresh state from the Daemon Context each turn instead. Only re-`list_controls` directly for the one-off cases above (container just `expand`ed, reconnect, IDs suspected stale).
 - Every response returns `{success, method, message}` — `method` reveals which UIA pattern fired; "no supported pattern" means wrong action for that control type (e.g. Slider wants `set_range_value`).
 
 ---

@@ -39,3 +39,14 @@ Any action you would manually re-call each turn — keeping a snapshot fresh, mo
 2. Daemonise it once.
 3. Read its output from context.
 4. Unregister when stale.
+
+---
+
+## EXAMPLES
+
+```json
+{"action": "create_daemon", "daemon_action": {"action": "list_controls"}, "history": "Watching for search results to populate instead of polling manually"}
+{"action": "unregister_daemon", "index": 0, "history": "Results loaded, watcher no longer needed"}
+```
+
+Common candidates: `list_controls` while waiting for a Direct App Control list/tree to populate or refresh, `list_processes` while waiting for an app to launch, any `mcp_tool_call` that just checks status.
