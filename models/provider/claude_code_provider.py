@@ -90,7 +90,6 @@ class ClaudeCodeProvider(ModelProvider):
 
     @staticmethod
     def kill_all_running() -> None:
-        """Wired to the stop control. Safe to call from any thread."""
         with _running_processes_lock:
             processes = list(_running_processes)
         for process in processes:
@@ -126,8 +125,8 @@ class ClaudeCodeProvider(ModelProvider):
             self._argv_prefix = [os.environ.get("COMSPEC", "cmd.exe"), "/c", resolved]
 
         self.cli_path = resolved
-
         self.system_prompt_path = os.path.abspath(system_prompt_path)
+
         self.timeout = timeout
 
         self.effort = effort
@@ -140,6 +139,8 @@ class ClaudeCodeProvider(ModelProvider):
         self.context_warning_tokens = int(context_warning_tokens)
 
         self._disabled_flags: set[str] = set()
+
+        self.session_id: str | None = None
 
         if use_caching:
             logger.warning(
@@ -281,7 +282,9 @@ class ClaudeCodeProvider(ModelProvider):
 
     # Claude Code call
 
-    def _command(self, model: str, system_path: str | None) -> list[str]:
+    def _create_claude_code_command(
+        self, model: str, system_path: str | None
+    ) -> list[str]:
         command = self._argv_prefix + [
             "-p",
             "--output-format",
@@ -311,15 +314,21 @@ class ClaudeCodeProvider(ModelProvider):
 
     def _optional_flags(self) -> dict[str, list[str]]:
         flags = {
-            "--no-session-persistence": ["--no-session-persistence"],
             "--permission-prompts": ["--permission-prompts", "none"],
             "--effort": ["--effort", self.effort],
         }
+
         if settings.model_providers.claude_code.fallback_model:
             flags["--fallback-model"] = ["--fallback-model", self.fallback_model]
 
         if settings.model_providers.claude_code.run_bare:
             flags["--bare"] = ["--bare"]
+
+        if not settings.model_providers.claude_code.reuse_sessions:
+            flags["--no-session-persistence"] = ["--no-session-persistence"]
+
+        if settings.model_providers.claude_code.reuse_sessions and self.session_id:
+            flags["--resume"] = ["--resume", self.session_id]
 
         return flags
 
@@ -395,7 +404,7 @@ class ClaudeCodeProvider(ModelProvider):
 
     def _run_once(self, model: str, system_path: str | None, prompt: str) -> dict:
         process = subprocess.Popen(
-            self._command(model, system_path),
+            self._create_claude_code_command(model, system_path),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -433,6 +442,9 @@ class ClaudeCodeProvider(ModelProvider):
         if payload.get("is_error"):
             detail = str(payload.get("result") or payload.get("subtype") or "").strip()
             self._raise_for_detail(detail[:500], "reported an error")
+
+        if payload.get("session_id"):
+            self.session_id = payload["session_id"]
 
         return payload
 
