@@ -2,8 +2,6 @@
 
 Send a read-only action once; Kodo re-runs it in the background and returns the result the moment it changes, or at timeout — no manual re-polling.
 
----
-
 ## SCHEMA
 
 ```json
@@ -11,8 +9,6 @@ Send a read-only action once; Kodo re-runs it in the background and returns the 
 ```
 
 The default `timeout` is `15`.
-
----
 
 ## CONSTRAINTS
 

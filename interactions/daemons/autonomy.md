@@ -2,16 +2,12 @@
 
 Polling/monitoring/refreshing steps a daemon handles instead of you re-calling them every turn. Runs the tool call on your behalf and injects fresh results into context — costs you no action.
 
----
-
 ## SCHEMAS
 
 ```json
 {"action": "create_daemon", "daemon_action": {...}, "history": "string"}
 {"action": "unregister_daemon", "index": int, "history": "string"}
 ```
-
----
 
 ## When to daemonise
 
@@ -22,10 +18,6 @@ Any action you would manually re-call each turn — keeping a snapshot fresh, mo
 1. `create_daemon` with `daemon_action` = the action dict to repeat. Runs every turn on your behalf.
 2. Read its output from the Daemon Context each turn — do not re-call it yourself.
 3. `unregister_daemon` with its `index` once stale/no longer needed.
-
----
-
-## EXAMPLES
 
 ```json
 {"action": "create_daemon", "daemon_action": {"action": "list_controls"}, "history": "Watching for search results to populate instead of polling manually"}

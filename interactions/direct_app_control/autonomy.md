@@ -1,6 +1,6 @@
 # Direct App Control (UIA)
 
-UIA-based control of running apps — no focus steal, no cursor movement. Ranked #4 in Core's Interaction Layer Priority — try after MCP/Skills/Python, before PC Actions. App need not be focused or foregrounded to control.
+UIA-based control of running apps — no focus steal, no cursor movement. App need not be focused or foregrounded to control.
 
 **Direct App Control doesn't steal focus — prefer it over PC Actions whenever both could work. If it doesn't work, `directive` what you learned and fall back to the next layer per Interaction Layer Priority.**
 **The app doesn't need to be visible, focused, or on the taskbar — DAC controls it independent of what's on screen. Skip the screenshot; the user may be doing something else and can work in parallel with you.**
@@ -8,8 +8,6 @@ UIA-based control of running apps — no focus steal, no cursor movement. Ranked
 **If already open:** never `open_app`/navigate. Go straight to `list_processes` → `connect` → act. Skip verification via screenshot/tree — DAC's control list is authoritative.
 
 **If connect fails** (claimed-open app not found / app blocked DAC): `retry` once with fresh `list_processes`, then `stuck` if still absent — don't guess-launch.
-
----
 
 ## Mandatory init sequence
 
@@ -19,8 +17,6 @@ UIA-based control of running apps — no focus steal, no cursor movement. Ranked
 4. Container reveals new children (e.g. `expand`) → re-`list_controls` for fresh IDs before touching them.
 
 Re-`connect` to switch apps freely, no disconnect needed.
-
----
 
 ## SCHEMAS
 
@@ -38,8 +34,6 @@ Re-`connect` to switch apps freely, no disconnect needed.
 {"action": "minimize_window|maximize_window|restore_window|close_window", "control_id": "string", "history": "string"}
 ```
 
----
-
 ## NOTES
 
 - **IDs are session-scoped**, not stable across restart/reconnect — always fresh from `list_controls`.
@@ -53,13 +47,7 @@ Re-`connect` to switch apps freely, no disconnect needed.
 - **Waiting on content to load/refresh** (e.g. search results populating, a list filling in after typing): don't manually re-`list_controls` every turn — `create_daemon` with `{"action": "list_controls"}` once and read the fresh state from the Daemon Context each turn instead. Only re-`list_controls` directly for the one-off cases above (container just `expand`ed, reconnect, IDs suspected stale).
 - Every response returns `{success, method, message}` — `method` reveals which UIA pattern fired; "no supported pattern" means wrong action for that control type (e.g. Slider wants `set_range_value`).
 
----
-
-## EXAMPLES
-
 ```json
-{"action": "list_processes", "history": "Listing windows"}
-{"action": "connect", "process_id": 1234, "history": "Connected to notepad.exe"}
 {"action": "set_value", "control_id": "12-345678-9", "value": "hello world", "history": "Typed into edit field"}
 {"action": "expand", "control_id": "12-345678-10", "history": "Expanded ComboBox"}
 ```

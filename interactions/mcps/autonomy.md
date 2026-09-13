@@ -1,18 +1,14 @@
 # MCPs
 
-Calls external MCP tool servers for app-specific actions beyond OS control. Ranked #1 in Core's Interaction Layer Priority. Use when the task needs a defined tool/API, not raw window control.
+Calls external MCP tool servers for app-specific actions beyond OS control. Use when the task needs a defined tool/API, not raw window control.
 
 Confirm tool name + arg schema from the server's registered list before calling — never guess.
-
----
 
 ## SCHEMA
 
 ```json
 {"action": "mcp_tool_call", "tool": "string", "arguments": {}, "history": "string"}
 ```
-
----
 
 ## ISOLATION — HARD RULE
 
@@ -23,8 +19,6 @@ Once an MCP tool claims a resource (browser tab, app instance, connection), that
 **Concrete failure:** MCP opens Chrome → next step needs a click → wrong: DAC `connect` into that Chrome. Right: use that same MCP server's click/nav tool.
 
 **No equivalent tool exists for the step?** Emit `stuck` naming the gap. Don't improvise a cross-layer reach-in.
-
----
 
 ## CONSTRAINTS
 - Only call registered/connected tools this session.

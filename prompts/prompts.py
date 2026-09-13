@@ -53,12 +53,13 @@ def construct_mode_prompt(mode: str) -> str:
     # generic priority order) so the model knows what's actually available to it
     # before reading anything else. Custom instructions (user preferences) go last.
     return (
-        base_prompt
-        + "\n"
-        + layers_header
-        + interaction_layer_prompts
-        + "\n"
-        + custom_instructions
+        base_prompt.strip()
+        + "\n\n"
+        + layers_header.strip()
+        + "\n\n"
+        + interaction_layer_prompts.strip()
+        + "\n\n"
+        + custom_instructions.strip()
     )
 
 
