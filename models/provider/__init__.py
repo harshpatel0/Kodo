@@ -134,7 +134,6 @@ def _create_claude_code_provider() -> ClaudeCodeProvider:
     return ClaudeCodeProvider(
         cli_path=getattr(cfg, "cli_path", "claude"),
         timeout=getattr(cfg, "timeout", 120),
-        effort=getattr(cfg, "effort", "low"),
         model=resolved_model.get("model"),  # type: ignore
-        model=resolved_model.get("effort"),  # type: ignore
+        effort=resolved_model.get("effort"),  # type: ignore
     )
