@@ -31,3 +31,4 @@ Hands off to `skill_installation` mode to provision, then returns control.
 - Follow the skill's own steps — don't reimplement via another layer.
 - Request only skills relevant to the current step.
 - No match → next layer per Core's Interaction Layer Priority.
+- `install_skills` must be a standalone action, never inside a parallel batch.

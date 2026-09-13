@@ -49,18 +49,14 @@ class SkillInstallationMode:
         return skill_orchestrator.loaded_skills
 
     def run(self, task):
-        system_prompt = prompts.SKILL_INSTALLATION_PROMPT
         system_prompt = (
-            system_prompt
-            + "\nHere are the available skills: "
-            + f"{skill_orchestrator.get_skills_summary()}"
+            prompts.SKILL_INSTALLATION_PROMPT
+            + f"\n# Available Skills\n{skill_orchestrator.get_skills_summary()}"
         )
         tool_schemas = mcp_registry.get_tool_schemas()
         if tool_schemas:
-            system_prompt = (
-                system_prompt + "\nHere are the installed MCP Servers: \n" + tool_schemas
-            )
-        user_prompt = f"Commence skill installation mode. Return a list of skills to install as per required output scheme that you might need to complete this task: {task}"
+            system_prompt += f"\n# Installed MCP Servers\n{tool_schemas}"
+        user_prompt = f"Select skills for this task: {task}"
 
         messages = [
             ChatMessage(role="system", content=system_prompt),
@@ -157,19 +153,16 @@ The following MCP tools are available this session. When you use an MCP tool, al
             f"\nExpected Result: {expected_result}" if expected_result else ""
         )
         user_prompt = f"""
-# Step Context
-Current Task: {task}{instruction_line}{expected_line}
+# Task
+{task}{instruction_line}{expected_line}
 
-# App Context
-Active Window: {context_provider.get_active_window()}
+# Active Window
+{context_provider.get_active_window()}
 
-Accessibility Tree
-ControlType, name, x, y
+# Accessibility Tree (ControlType, name, x, y)
 {ui_tree_handler.request_tree_diffs()}
 
-# System Context
-TASKBAR (located at the bottom of the screen, y ≈ {context_provider.screen_height - 20}): 
-Taskbar Elements
+# Taskbar (y ≈ {context_provider.screen_height - 20})
 {context_provider.get_taskbar_elements()}
 """
         return user_prompt
@@ -178,10 +171,9 @@ Taskbar Elements
         self,
         user_prompt,
         additional_context,
-        accompanying_message="Additional context from the previous step:",
+        accompanying_message="# Previous Step Result",
     ):
-        user_prompt = user_prompt + f"\n{accompanying_message}\n{additional_context}"
-        return user_prompt
+        return user_prompt + f"\n{accompanying_message}\n{additional_context}"
 
     def run(self, user_prompt):
         cfg = _get_actor_config()

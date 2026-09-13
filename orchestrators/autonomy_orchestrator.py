@@ -190,13 +190,18 @@ class AutonomyOrchestrator:
 
         if unresolvable:
             logger.warning(f"Requested skills not found: {unresolvable}")
-            self.additional_context += f"\nThe following requested skills could not be found: {unresolvable}. Proceed without them."
+            self.additional_context += (
+                f"\n[ERROR] Skill(s) not found: {unresolvable}. Proceed without them."
+            )
 
         if skills_already_installed:
             logger.warning(
                 f"Not installing: {skills_already_installed}, already installed"
             )
-            self.additional_context += f"\n The following skills are already installed: {skills_already_installed}, here are all available actions for a refresher: {self.skill_orchestrator.list_actions()}"
+            self.additional_context += (
+                f"\n[NOTE] Already installed: {skills_already_installed}. "
+                f"Available actions: {self.skill_orchestrator.list_actions()}"
+            )
 
         self.runtime_skills = self.skill_orchestrator.load_all_requested_skills(
             installable, "actor"
@@ -353,7 +358,7 @@ History (truncated):
                         message=combined_history,
                     )
 
-            elif self.step_result.get("install_skills"):
+            elif self.step_result.get("action") == "install_skills":
                 self._handle_skill_installation(self.step_result["skills"])
                 self.history.append(self.step_result.get("history", "None"))
                 web_emitter.history(list(self.history.history))
@@ -363,9 +368,9 @@ History (truncated):
                     f"Actor response had no 'action' field, retrying: {self.step_result}"
                 )
                 self.additional_context = (
-                    "[ERROR]: Your last response was valid JSON but had no 'action' "
-                    "field. Every response must be exactly one JSON object with an "
-                    "'action' field naming the action to take."
+                    "[ERROR] Your last response was valid JSON but had no 'action' "
+                    "field. Reply with exactly one JSON object (or array) containing "
+                    "an 'action' field naming the action to take."
                 )
                 time.sleep(settings.orchestrator.action_settle_time)
 

@@ -59,29 +59,30 @@ def do_step(
     )
 
     if additional_context:
-        user_prompt = actor.return_prompt_with_additional_context(
-            user_prompt, additional_context
-        )
+        # Every additional_context string the harness builds is already
+        # self-describing (a "# Header" or "[TAG]" prefix) — append directly
+        # instead of wrapping it in a second, redundant header.
+        user_prompt = user_prompt + "\n" + additional_context
 
     if punishment_tally:
         user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=punishment_tally,
-            accompanying_message="Here are the number of iterations you have made on this task",
+            accompanying_message="# Iteration Budget",
         )
 
     if available_skill_actions:
         user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=available_skill_actions,
-            accompanying_message="The following are the available skill actions, skill actions run like any skill, you are advised on how to run them already",
+            accompanying_message="# Available Skill Actions\nRun these like any other action — the name below is the action name.",
         )
 
     if runtime_skills:
         user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=runtime_skills,
-            accompanying_message="The following skill(s) was/were just installed and is now available to you:",
+            accompanying_message="# Just Installed",
         )
 
     if (
@@ -91,15 +92,14 @@ def do_step(
         user_prompt = actor.return_prompt_with_additional_context(
             user_prompt=user_prompt,
             additional_context=str(direct_app_handler.list_process_str()),
-            accompanying_message=f"Here are the controls of the connected app {direct_app_handler.return_app_window()} with PID {direct_app_handler.return_connected_pid}",
+            accompanying_message=f"# Connected App Controls ({direct_app_handler.return_app_window()}, PID {direct_app_handler.return_connected_pid()})",
         )
 
-    if str(daemon_provider):
-        user_prompt = actor.return_prompt_with_additional_context(
-            user_prompt=user_prompt,
-            additional_context=str(daemon_provider),
-            accompanying_message="Fresh daemon output from this turn (authoritative — do not re-query):",
-        )
+    daemon_context = str(daemon_provider)
+    if daemon_context:
+        # daemon_provider already emits its own "# Daemon Context" header, so
+        # append it directly instead of wrapping it in a second one.
+        user_prompt = user_prompt + "\n" + daemon_context
 
     from models.provider import get_provider
 
@@ -110,14 +110,14 @@ def do_step(
         user_prompt = actor.return_prompt_with_additional_context(
             user_prompt,
             additional_context=history,
-            accompanying_message="Here is a running history of everything you said you did:",
+            accompanying_message="# History",
         )
 
     if directive:
         user_prompt = actor.return_prompt_with_additional_context(
             user_prompt=user_prompt,
             additional_context=directive,
-            accompanying_message="Here are directives from previous models, follow them:",
+            accompanying_message="# Directives",
         )
 
     show_loading_text()

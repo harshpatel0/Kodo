@@ -1,6 +1,6 @@
 # Watchdogs
 
-Watchdogs allow you to send a `read_only` action for Kodo to watch it for you, when it changes or the timeout expires, it will automatically return the result. Use this when you want to be alerted when something changes without calling the same action.
+Send a read-only action once; Kodo re-runs it in the background and returns the result the moment it changes, or at timeout — no manual re-polling.
 
 ---
 
