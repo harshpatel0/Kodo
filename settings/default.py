@@ -27,11 +27,11 @@ default_settings = {
         "claude_code": {
             "cli_path": "claude",
             "timeout": 120,
-            "effort": "low",
-            "model": "sonnet",
+            "model": "sonnet:low",
             "fallback_model": None,
             "run_bare": False,
             "claude_code_api_key_env_var": "CLAUDE_CODE_API_KEY",
+            "reuse_sessions": False,
         },
     },
     "models": {

@@ -45,11 +45,11 @@ class OpenAICompatibleProviderSettings:
 class ClaudeCodeProviderSettings:
     cli_path: str
     timeout: int
-    effort: str
     model: str
     run_bare: bool
     fallback_model: str | None
     claude_code_api_key_env_var: str | None
+    reuse_sessions: bool
 
 
 class ModelProvidersSettings:

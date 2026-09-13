@@ -108,11 +108,33 @@ def _create_openai_compatible_provider() -> OpenAICompatibleProvider:
     )
 
 
+VALID_EFFORTS = ["low", "medium", "high", "xhigh", "max"]
+VALID_MODELS = ["haiku", "sonnet", "opus", "fable", "mythos"]
+
+
+def _resolve_claude_code_model(model_str: str) -> dict["str", "str"]:
+    model, effort = model_str.split(":")
+
+    if model not in VALID_MODELS:
+        raise ValueError(f"{model} is not a valid model.")
+
+    if effort not in VALID_EFFORTS:
+        raise ValueError(f"{effort} is not a valid effort level for the model")
+
+    return {"model": model, "effort": effort}
+
+
 def _create_claude_code_provider() -> ClaudeCodeProvider:
     cfg = getattr(settings.model_providers, "claude_code", None)
+
+    resolved_model = _resolve_claude_code_model(
+        model_str=getattr(cfg, "model", "sonnet:low"),
+    )
+
     return ClaudeCodeProvider(
         cli_path=getattr(cfg, "cli_path", "claude"),
         timeout=getattr(cfg, "timeout", 120),
         effort=getattr(cfg, "effort", "low"),
-        model=getattr(cfg, "model", "sonnet"),
+        model=resolved_model.get("model"),  # type: ignore
+        model=resolved_model.get("effort"),  # type: ignore
     )
