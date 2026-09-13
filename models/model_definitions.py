@@ -55,11 +55,11 @@ class SkillInstallationMode:
             + "\nHere are the available skills: "
             + f"{skill_orchestrator.get_skills_summary()}"
         )
-        system_prompt = (
-            system_prompt
-            + "\n Here are the installed MCP Servers: \n"
-            + f"{mcp_registry.get_tool_schemas()}"
-        )
+        tool_schemas = mcp_registry.get_tool_schemas()
+        if tool_schemas:
+            system_prompt = (
+                system_prompt + "\nHere are the installed MCP Servers: \n" + tool_schemas
+            )
         user_prompt = f"Commence skill installation mode. Return a list of skills to install as per required output scheme that you might need to complete this task: {task}"
 
         messages = [
@@ -137,12 +137,16 @@ Treat skill actions as first-class actions alongside the standard ones above.
 # PC Environment
 OS: {context_provider.WINDOWS_VERSION}
 Screen: {context_provider.screen_width}x{context_provider.screen_height}
+"""
 
+            tool_schemas = mcp_registry.get_tool_schemas()
+            if tool_schemas:
+                system_prompt = system_prompt + f"""
 # Registered MCP Servers
 The following MCP tools are available this session. When you use an MCP tool, all interaction with that tool's domain (e.g. the browser it opened, the service it connects to) MUST use MCP only, do not mix in direct app control, keyboard and mouse actions, or skills. MCP is a self-contained external protocol.
 
-{mcp_registry.get_tool_schemas()}
-    """
+{tool_schemas}
+"""
             self.system_prompt = system_prompt
 
         return self.system_prompt

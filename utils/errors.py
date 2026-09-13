@@ -21,13 +21,7 @@ ACTION_LAYERS: dict[str, str] = {
 # Derive DAC entries from the single source of truth
 ACTION_LAYERS.update({action: "direct_app_control" for action in DAC_ACTIONS})
 
-_VALID_ACTIONS = sorted(ACTION_LAYERS.keys()) + [
-    "done",
-    "stuck",
-    "retry",
-    "replan",
-    "directive",
-]
+_ALWAYS_VALID_ACTIONS = ["done", "stuck", "retry", "replan", "directive"]
 
 
 def unknown_action_error(attempted: str) -> str:
@@ -37,7 +31,13 @@ def unknown_action_error(attempted: str) -> str:
             f"The action '{attempted}' requires the '{layer}' interaction layer, "
             f"which is currently disabled by the user"
         )
+    # Filtered at call time, not import time: an unrecognized action name must
+    # only be offered actions from layers actually enabled this session.
+    enabled_actions = sorted(
+        action for action, action_layer in ACTION_LAYERS.items()
+        if check_layer(action_layer)
+    ) + _ALWAYS_VALID_ACTIONS
     return (
         f"The action '{attempted}' does not exist. "
-        f"Valid actions are: {', '.join(_VALID_ACTIONS)}."
+        f"Valid actions are: {', '.join(enabled_actions)}."
     )

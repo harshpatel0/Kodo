@@ -31,3 +31,4 @@ Once an MCP tool claims a resource (browser tab, app instance, connection), that
 - Match arguments exactly to schema.
 - Treat returned result as current state for next turn.
 - Isolation ends when the sub-task's resource is released (closed, or task done).
+- **Checking the same tool repeatedly for a status change** (job progress, a value settling)? `create_daemon` with that `mcp_tool_call` once instead of re-calling it manually every turn.

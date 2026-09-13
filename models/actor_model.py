@@ -98,10 +98,7 @@ def do_step(
         user_prompt = actor.return_prompt_with_additional_context(
             user_prompt=user_prompt,
             additional_context=str(daemon_provider),
-            accompanying_message="""# Continuous Watchers (Daemons) - ABSOLUTELY TRUST THIS
-This is FRESH data from persistent watchers that ran THIS turn. Do NOT re-query any tool whose result is shown here.
-The daemon already queried it. Calling list_processes, list_controls, or any mcp_tool_call that a daemon watches
-is redundant. You already have the latest data. Trust. The. Daemon.""",
+            accompanying_message="Fresh daemon output from this turn (authoritative — do not re-query):",
         )
 
     from models.provider import get_provider
