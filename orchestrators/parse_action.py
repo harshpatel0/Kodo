@@ -212,9 +212,6 @@ def parse_action(
             error_message = unknown_action_error(attempted)
             return_command = "RETRY"
 
-    if not skill_orchestrator.can_handle(action.get("action")) and not error_message:
-        error_message = f"The skill {action.get("action")} does not exist."
-
     return PrimitiveActionResult(
         action=action, command=return_command, error_message=error_message
     )

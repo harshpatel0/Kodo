@@ -348,6 +348,17 @@ History (truncated):
                 self.history.append(self.step_result.get("history", "None"))
                 web_emitter.history(list(self.history.history))
 
+            elif "action" not in self.step_result:
+                logger.warning(
+                    f"Actor response had no 'action' field, retrying: {self.step_result}"
+                )
+                self.additional_context = (
+                    "[ERROR]: Your last response was valid JSON but had no 'action' "
+                    "field. Every response must be exactly one JSON object with an "
+                    "'action' field naming the action to take."
+                )
+                time.sleep(settings.orchestrator.action_settle_time)
+
             else:
                 ar = call_action(
                     action=self.step_result,
