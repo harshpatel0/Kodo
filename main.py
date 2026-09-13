@@ -8,6 +8,8 @@ import bootstrapper
 from utils import check_layer
 from utils import toaster
 
+from server.run_tracker import teardown_all
+
 from settings import settings
 
 
@@ -131,4 +133,8 @@ if __name__ == "__main__":
             start_tray(window, window_api)
             uvicorn.run("server.api:app", host=HOST, port=API_PORT, reload=False)
 
-        webview.start(_bootstrap, args=(win,))
+        try:
+            webview.start(_bootstrap, args=(win,))
+        except KeyboardInterrupt:
+            teardown_all()
+            exit(0)
