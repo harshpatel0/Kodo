@@ -14,6 +14,7 @@ it, and so the two tiers (agent-only vs. everything) stay obviously distinct:
 import ctypes
 import os
 import threading
+from utils.globals import RUNTIME_FILE_LOCATION
 
 _active_thread_id: int | None = None
 
@@ -45,6 +46,13 @@ def _kill_thread(thread_id: int) -> None:
     )
 
 
+def remove_temp_files() -> None:
+    """
+    Basically delete the temp folder and call it a day
+    """
+    os.rmdir(RUNTIME_FILE_LOCATION)
+
+
 def teardown_agent() -> None:
     """Best-effort teardown of whatever the orchestrator is currently doing: kill any
     subprocess a skill/python action spawned, and any in-flight `claude` CLI call the
@@ -60,6 +68,11 @@ def teardown_agent() -> None:
 
     if _active_thread_id is not None:
         _kill_thread(_active_thread_id)
+
+    try:
+        remove_temp_files()
+    except Exception:
+        pass
 
 
 def teardown_all() -> None:
@@ -79,6 +92,11 @@ def teardown_all() -> None:
         from interactions.mcps.mcp_registry import mcp_registry
 
         mcp_registry.disconnect_all()
+    except Exception:
+        pass
+
+    try:
+        remove_temp_files()
     except Exception:
         pass
 
