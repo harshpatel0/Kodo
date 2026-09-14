@@ -442,8 +442,7 @@ if __name__ == "__main__":
         args = json.loads(sys.argv[1])
     except (IndexError, json.JSONDecodeError):
         print(
-            "Error: Invalid or missing JSON arguments provided to skill. ",
-            "The skill takes JSON as its parameters: {\"open_app\": \"appname\"}"
+            'Error: Invalid or missing JSON arguments provided to skill, The skill takes JSON as its parameters: {"open_app": "appname"}',
             file=sys.stderr,
         )
         sys.exit(1)
