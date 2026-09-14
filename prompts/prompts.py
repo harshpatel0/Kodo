@@ -32,7 +32,8 @@ def construct_mode_prompt(mode: str) -> str:
 
     layers_header = (
         f"\n# Available Interaction Layers\n"
-        f"The following interaction layers are enabled this session: {', '.join(active_layers)}.\n"
+        f"Enabled this session: {', '.join(active_layers)}. Any other layer or its actions "
+        f"do not exist for you this session — do not attempt them.\n"
     )
 
     interaction_layer_prompts = ""
@@ -48,7 +49,18 @@ def construct_mode_prompt(mode: str) -> str:
 
     custom_instructions = load_prompt("custom_instructions.md", prompts_folder)
 
-    return base_prompt + "\n" + custom_instructions + "\n" + layers_header + interaction_layer_prompts
+    # Layers header + docs come right after the base prompt (which sets out the
+    # generic priority order) so the model knows what's actually available to it
+    # before reading anything else. Custom instructions (user preferences) go last.
+    return (
+        base_prompt.strip()
+        + "\n\n"
+        + layers_header.strip()
+        + "\n\n"
+        + interaction_layer_prompts.strip()
+        + "\n\n"
+        + custom_instructions.strip()
+    )
 
 
 def construct_autonomy_mode_prompt() -> str:

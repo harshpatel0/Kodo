@@ -1,15 +1,13 @@
 # Direct App Control (UIA)
 
-UIA-based control of running apps — no focus steal, no cursor movement. Ranked #4 in Core's Interaction Layer Priority — try after MCP/Skills/Python, before PC Actions. App need not be focused or foregrounded to control.
+UIA-based control of running apps — no focus steal, no cursor movement. App need not be focused or foregrounded to control.
 
-**You should always prioritise Direct App Control over PC Actions, as Direct App Control does not steal focus from the user. If Direct App Control doesn't work, run a directive and fallback to PC Actions after alerting the user.**
-**You do not need to click on the app in the taskbar to see it, you don't need to see the app running, Direct App Control is designed to give you a friendly interface to interact with the application. When using Direct App Control, do not use the screenshot, as the user might be doing something else. You and the user can run in parallel with Direct App Control!**
+**Direct App Control doesn't steal focus — prefer it over PC Actions whenever both could work. If it doesn't work, `directive` what you learned and fall back to the next layer per Interaction Layer Priority.**
+**The app doesn't need to be visible, focused, or on the taskbar — DAC controls it independent of what's on screen. Skip the screenshot; the user may be doing something else and can work in parallel with you.**
 
 **If already open:** never `open_app`/navigate. Go straight to `list_processes` → `connect` → act. Skip verification via screenshot/tree — DAC's control list is authoritative.
 
 **If connect fails** (claimed-open app not found / app blocked DAC): `retry` once with fresh `list_processes`, then `stuck` if still absent — don't guess-launch.
-
----
 
 ## Mandatory init sequence
 
@@ -19,8 +17,6 @@ UIA-based control of running apps — no focus steal, no cursor movement. Ranked
 4. Container reveals new children (e.g. `expand`) → re-`list_controls` for fresh IDs before touching them.
 
 Re-`connect` to switch apps freely, no disconnect needed.
-
----
 
 ## SCHEMAS
 
@@ -38,28 +34,20 @@ Re-`connect` to switch apps freely, no disconnect needed.
 {"action": "minimize_window|maximize_window|restore_window|close_window", "control_id": "string", "history": "string"}
 ```
 
----
-
 ## NOTES
 
 - **IDs are session-scoped**, not stable across restart/reconnect — always fresh from `list_controls`.
 - **Hidden-but-listed control** ("Control not found" on interact): likely gated by a trigger (e.g. conditional field). Find trigger, interact, re-list.
-- **ComboBox, in order:** (1) `set_value` on the ComboBox itself with target text — works collapsed, no focus needed. (2) If fails: `expand` → `list_controls` → `interact` on the revealed ListItem. (3) If both fail: `pc_actions` click.
+- **ComboBox, in order:** (1) `set_value` on the ComboBox itself with target text — works collapsed, no focus needed. (2) If fails: `expand` → `list_controls` → `interact` on the revealed ListItem. (3) If both fail: next layer per Interaction Layer Priority.
 - **ComboBox items are visible pre-expand** in `list_controls` — no need to `expand` just to see options.
 - **Minimized/background windows appear in `list_processes`** if titled — connect regardless of window state.
 - **Structural containers (Pane/Group/wrapper Window/Custom) are pre-filtered** from `list_controls` — don't target them.
-- **Focus:** all patterns here are focus-neutral by spec; some browser `Invoke` providers may steal focus anyway — if seen, prefer `Select` on the ListItem, or `set_value` on the parent ComboBox. Genuine focus-required input → fall back to `pc_actions`.
-- **Infeasible-without-focus task:** don't force it through `pc_actions` as workaround here — toast the detail, `done` early.
+- **Focus:** all patterns here are focus-neutral by spec; some browser `Invoke` providers may steal focus anyway — if seen, prefer `Select` on the ListItem, or `set_value` on the parent ComboBox. Genuine focus-required input → next layer per Interaction Layer Priority.
+- **Infeasible-without-focus task with no fallback layer available:** don't force it — toast the detail, `done` early.
 - **Waiting on content to load/refresh** (e.g. search results populating, a list filling in after typing): don't manually re-`list_controls` every turn — `create_daemon` with `{"action": "list_controls"}` once and read the fresh state from the Daemon Context each turn instead. Only re-`list_controls` directly for the one-off cases above (container just `expand`ed, reconnect, IDs suspected stale).
 - Every response returns `{success, method, message}` — `method` reveals which UIA pattern fired; "no supported pattern" means wrong action for that control type (e.g. Slider wants `set_range_value`).
 
----
-
-## EXAMPLES
-
 ```json
-{"action": "list_processes", "history": "Listing windows"}
-{"action": "connect", "process_id": 1234, "history": "Connected to notepad.exe"}
 {"action": "set_value", "control_id": "12-345678-9", "value": "hello world", "history": "Typed into edit field"}
 {"action": "expand", "control_id": "12-345678-10", "history": "Expanded ComboBox"}
 ```

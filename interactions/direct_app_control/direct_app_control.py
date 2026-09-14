@@ -280,13 +280,13 @@ class DirectAppController:
 
         parts = []
         if added:
-            parts.append("Here are the added controls:")
+            parts.append("Added:")
             parts.extend(f"\t[+] {c}" for c in added)
         if removed:
-            parts.append("Here are the removed controls:")
+            parts.append("Removed:")
             parts.extend(f"\t[-] {c}" for c in removed)
         if not parts:
-            parts.append("No changes to controls since last check.")
+            parts.append("(no change since last check)")
 
         return "\n".join(parts)
 

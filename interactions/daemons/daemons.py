@@ -43,9 +43,7 @@ class Daemons:
         if not self._entries and not self._removed:
             return ""
 
-        daemon_text = (
-            "# Daemon Context - Current State (no need to re-query these tools)\n"
-        )
+        daemon_text = "# Daemon Context\n"
         still_alive: list[_DaemonEntry] = []
 
         for entry in self._entries:

@@ -25,6 +25,15 @@ import orchestrators.autonomy_helpers
 from utils import estimate_tokens
 from utils.globals import DAC_ACTIONS
 
+
+def _truncate(text: str, limit: int) -> str:
+    """Truncate at the last word boundary before `limit` rather than mid-word/number."""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0] or text[:limit]
+    return f"{cut}..."
+
 from utils import toaster
 from server.log_stream import web_emitter
 
@@ -79,9 +88,13 @@ class AutonomyOrchestrator:
         summary = self._summarize_raw_result(ar.raw_result)
         if not summary:
             return intent
-        if len(intent) + len(summary) < 300:
-            return f"{intent} | {summary}"
-        return f"{intent} | {summary[:250]}..."
+        return f"{intent} | {summary}"
+
+    # Errors get a much larger truncation budget than successes: a failed step's
+    # history entry is often the only signal a later turn has for why an approach
+    # didn't work, so it must stay diagnostic rather than collapse to a bare tag.
+    _SUCCESS_CHAR_LIMIT = 150
+    _ERROR_CHAR_LIMIT = 300
 
     def _summarize_raw_result(self, raw) -> str | None:
         if raw is None:
@@ -96,29 +109,22 @@ class AutonomyOrchestrator:
             if not texts:
                 return None
             combined = "; ".join(texts)
-            error_tag = " [ERROR]" if raw.isError else ""
             if raw.isError:
-                if estimate_tokens(combined) > 60:
-                    return f"[ERROR]{error_tag}"
-            elif estimate_tokens(combined) > 30:
+                return f"[ERROR] {_truncate(combined, self._ERROR_CHAR_LIMIT)}"
+            if estimate_tokens(combined) > 30:
                 return None
-            if len(combined) <= 200:
-                return f"{combined}{error_tag}"
-            return f"{combined[:197]}{error_tag}..."
+            return _truncate(combined, self._SUCCESS_CHAR_LIMIT)
 
         if isinstance(raw, KodoSkillResult):
-            parts = []
             has_error = raw.result in ("ERROR", "TIMEOUT")
-            if raw.skill_output:
-                if estimate_tokens(raw.skill_output) <= (60 if has_error else 30):
-                    parts.append(raw.skill_output[:200])
-            if has_error and raw.skill_errors:
-                if estimate_tokens(raw.skill_errors) <= 60:
-                    err = raw.skill_errors[:200]
-                    parts.append(f"error: {err}")
-                else:
-                    parts.append("[ERROR]")
-            return " | ".join(parts) if parts else None
+            if has_error:
+                detail = raw.skill_errors or raw.skill_output
+                if detail:
+                    return f"[ERROR] {_truncate(detail, self._ERROR_CHAR_LIMIT)}"
+                return "[ERROR]"
+            if raw.skill_output and estimate_tokens(raw.skill_output) <= 30:
+                return _truncate(raw.skill_output, self._SUCCESS_CHAR_LIMIT)
+            return None
 
         if isinstance(raw, DirectAppProcessList):
             count = len(raw.processes)
@@ -126,23 +132,27 @@ class AutonomyOrchestrator:
 
         if isinstance(raw, DirectAppControlListResult):
             if raw.error:
-                return f"controls error: {raw.error[:200]}"
+                return f"[ERROR] {_truncate(raw.error, self._ERROR_CHAR_LIMIT)}"
             count = len(raw.controls)
             return f"Found {count} controls"
 
         if isinstance(raw, DirectAppConnectionResult):
-            return f"{'Connected' if raw.success else 'Failed'}: {raw.message[:200]}"
+            if not raw.success:
+                return f"[ERROR] {_truncate(raw.message, self._ERROR_CHAR_LIMIT)}"
+            return f"Connected: {_truncate(raw.message, self._SUCCESS_CHAR_LIMIT)}"
 
         if isinstance(raw, DirectAppInteractionResult):
-            return f"{'Success' if raw.success else 'Failed'}: {raw.message[:200]}"
+            if not raw.success:
+                return f"[ERROR] {_truncate(raw.message, self._ERROR_CHAR_LIMIT)}"
+            return f"Success: {_truncate(raw.message, self._SUCCESS_CHAR_LIMIT)}"
 
         error = getattr(raw, "error", None) or getattr(raw, "error_message", None)
         if error:
-            return f"error: {str(error)[:200]}"
+            return f"[ERROR] {_truncate(str(error), self._ERROR_CHAR_LIMIT)}"
 
         message = getattr(raw, "message", None)
         if message:
-            return str(message)[:200]
+            return _truncate(str(message), self._SUCCESS_CHAR_LIMIT)
 
         return None
 
@@ -180,13 +190,18 @@ class AutonomyOrchestrator:
 
         if unresolvable:
             logger.warning(f"Requested skills not found: {unresolvable}")
-            self.additional_context += f"\nThe following requested skills could not be found: {unresolvable}. Proceed without them."
+            self.additional_context += (
+                f"\n[ERROR] Skill(s) not found: {unresolvable}. Proceed without them."
+            )
 
         if skills_already_installed:
             logger.warning(
                 f"Not installing: {skills_already_installed}, already installed"
             )
-            self.additional_context += f"\n The following skills are already installed: {skills_already_installed}, here are all available actions for a refresher: {self.skill_orchestrator.list_actions()}"
+            self.additional_context += (
+                f"\n[NOTE] Already installed: {skills_already_installed}. "
+                f"Available actions: {self.skill_orchestrator.list_actions()}"
+            )
 
         self.runtime_skills = self.skill_orchestrator.load_all_requested_skills(
             installable, "actor"
@@ -343,7 +358,7 @@ History (truncated):
                         message=combined_history,
                     )
 
-            elif self.step_result.get("install_skills"):
+            elif self.step_result.get("action") == "install_skills":
                 self._handle_skill_installation(self.step_result["skills"])
                 self.history.append(self.step_result.get("history", "None"))
                 web_emitter.history(list(self.history.history))
@@ -353,9 +368,9 @@ History (truncated):
                     f"Actor response had no 'action' field, retrying: {self.step_result}"
                 )
                 self.additional_context = (
-                    "[ERROR]: Your last response was valid JSON but had no 'action' "
-                    "field. Every response must be exactly one JSON object with an "
-                    "'action' field naming the action to take."
+                    "[ERROR] Your last response was valid JSON but had no 'action' "
+                    "field. Reply with exactly one JSON object (or array) containing "
+                    "an 'action' field naming the action to take."
                 )
                 time.sleep(settings.orchestrator.action_settle_time)
 

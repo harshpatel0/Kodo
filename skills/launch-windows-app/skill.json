@@ -5,5 +5,5 @@
   "entry": "skill.py",
   "dynamic_context": true,
   "generated_for_actor": true,
-  "dependencies": ["psutil"]
+  "dependencies": ["comtypes", "psutil"]
 }

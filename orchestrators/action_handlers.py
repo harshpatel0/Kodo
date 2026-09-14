@@ -16,6 +16,17 @@ _consecutive_tool_errors: dict[str, int] = {}
 MAX_CONSECUTIVE_TOOL_ERRORS = 3
 
 
+def _format_output_block(stdout: str, stderr: str) -> str:
+    """Only include sections that actually have content — skip the boilerplate
+    "no output"/"no errors" filler that used to print on every single call."""
+    parts = []
+    if stdout.strip():
+        parts.append(f"\n## Output\n{stdout}")
+    if stderr.strip():
+        parts.append(f"\n## Errors\n{stderr}")
+    return "".join(parts)
+
+
 def handle_proceed(step_count: int, iterations: int, in_autonomy: bool) -> ActionResult:
     if not in_autonomy:
         return ActionResult(
@@ -49,8 +60,8 @@ def handle_stuck(action: dict, iterations: int, in_autonomy: bool) -> ActionResu
     last_action = action.get("action", "")
     last_args = {k: v for k, v in action.items() if k != "action"}
     new_context = (
-        f"[DIAGNOSTIC] Last action was '{last_action}' with args: {json.dumps(last_args)}.\n"
-        f"{action.get('message', '')}" + "\n"
+        f"[STUCK] Last action: {last_action} {json.dumps(last_args)}\n"
+        f"{action.get('message', '')}"
     )
     return ActionResult(
         signal="CONTINUE",
@@ -82,8 +93,8 @@ def handle_replan(
 
     new_context = (
         additional_context
-        + "The current task is from the previous actor, instructing you what to do, when you are done with it, call an action and do not emit done under any circumstances"
-        + "\n"
+        + "\n[REPLAN] The task below is a sub-step inserted by replan. Complete it and "
+        "act — do not emit `done` for the overall task from this step."
     )
     return ActionResult(
         signal="CONTINUE",
@@ -101,14 +112,13 @@ def handle_retry(
     user_message = action.get("message", "")
     parts = []
     if user_message:
-        parts.append(f"[YOUR NOTE]: {user_message}")
+        parts.append(f"[NOTE] {user_message}")
     if error_message:
-        parts.append(f"[ERROR]: {error_message}")
+        parts.append(f"[ERROR] {error_message}")
     else:
         parts.append(
-            "[ERROR]: The Action Parser could not parse your action. "
-            "Make sure you output exactly one JSON object per response "
-            "with the correct action name and arguments."
+            "[ERROR] Could not parse your action. Output exactly one JSON "
+            "object (or array) per response with a valid action name and arguments."
         )
     new_context = "\n".join(parts)
     return ActionResult(signal="CONTINUE", additional_context=new_context)
@@ -122,10 +132,8 @@ def handle_skill_invocations(
 ) -> ActionResult:
     logger.debug(action_result)
     action_result_type = action_result.result
-    action_result_stderr = action_result.skill_errors or "No errors!"
-    action_result_stdout = (
-        action_result.skill_output or "Script / Skill outputted nothing"
-    )
+    action_result_stderr = action_result.skill_errors or ""
+    action_result_stdout = action_result.skill_output or ""
 
     logger.debug(
         f"Action Result Type for Custom Actions: {action_result_type}\nAction Result stderr: {action_result_stderr}\nAction Result stdout: {action_result_stdout}"
@@ -135,67 +143,49 @@ def handle_skill_invocations(
         return ActionResult(
             signal="CONTINUE",
             additional_context=additional_context
-            + f"The modules in the code/skill could not be discovered, and so cannot be run without errors\nHere are the errors returned: {action_result_stderr}\nHint: instead of inline Python, use the installed skills if a skill can be used to perform the task"
-            + "\n",
+            + f"[ERROR] Could not discover imports in the code/skill:\n{action_result_stderr}\n"
+            f"Hint: prefer an installed skill over inline Python when one covers this.",
         )
 
     elif action_result_type == "PACKAGE_INSTALL_ERROR":
         return ActionResult(
             signal="CONTINUE",
             additional_context=additional_context
-            + f"The modules in the code/skill could not be installed, and so the code/skill cannot be run without errors\nHere are the errors returned: {action_result_stderr}"
-            + "\n",
+            + f"[ERROR] Package install failed, code/skill did not run:\n{action_result_stderr}",
         )
 
     elif action_result_type == "TIMEOUT":
+        output_block = _format_output_block(action_result_stdout, action_result_stderr)
         return ActionResult(
             signal="CONTINUE",
-            additional_context=additional_context + f"""
-The code/skill took too long to run and was killed prematurely. Here are the logs of its output.
-
-## Output
-{action_result_stdout}
-
-## Errors
-{action_result_stderr}
-""" + "\n",
+            additional_context=additional_context
+            + f"[ERROR] Killed after exceeding the timeout.{output_block}",
         )
 
     elif action_result_type == "PY_EXCEPTION":
         return ActionResult(
             signal="CONTINUE",
             additional_context=additional_context
-            + f"The subprocess running your code/skill produced an exception\n{action_result_stderr}",
+            + f"[ERROR] Exception while running:\n{action_result_stderr}",
         )
 
     elif action_result_type == "ERROR":
+        output_block = _format_output_block(action_result_stdout, action_result_stderr)
         return ActionResult(
             signal="CONTINUE",
-            additional_context=additional_context + f"""
-The skill provided the following output with a severe error
-
-## Output
-{action_result_stdout}
-
-## Errors
-{action_result_stderr}
-""",
+            additional_context=additional_context
+            + f"[ERROR] Skill reported a severe error.{output_block}",
         )
 
     elif action_result_type == "SUCCESS":
+        output_block = _format_output_block(action_result_stdout, action_result_stderr)
+        if not output_block:
+            output_block = "\n(no output)"
         return ActionResult(
             signal="BREAK",
             step_count=step_count + 1 if not in_autonomy else None,
             replan_history=[],
-            additional_context=additional_context + f"""
-The skill provided the following output with no severe errors
-
-## Output
-{action_result_stdout}
-
-## Errors
-{action_result_stderr}
-""",
+            additional_context=additional_context + f"# Skill Result{output_block}",
         )
 
     else:
@@ -210,17 +200,11 @@ The skill provided the following output with no severe errors
 def handle_mcp_tool_call_result(action_result: CallToolResult) -> ActionResult:
     logger.debug(msg=action_result)
 
-    text_output = [
+    text_output = "\n".join(
         block.text for block in action_result.content if isinstance(block, TextContent)
-    ]
-    new_context = f"""
-# MCP Tool Call Result
-
-Text Output:
-    {text_output}
-
-Has any error occurred? {action_result.isError}
-"""
+    )
+    tag = "[ERROR] " if action_result.isError else ""
+    new_context = f"# MCP Tool Call Result\n{tag}{text_output}"
     return ActionResult(signal="CONTINUE", additional_context=new_context)
 
 
@@ -282,21 +266,18 @@ def call_action(
             action_result = ActionResult(
                 signal="CONTINUE",
                 additional_context=(
-                    f"The tool '{tool_name}' has failed {consecutive} consecutive times with the same error pattern. "
-                    f"STOP using this tool in this way. You MUST choose a completely different approach. "
-                    f"Do not retry the same tool again."
+                    f"[ERROR] '{tool_name}' has failed {consecutive} times in a row the "
+                    f"same way. Stop using it this way — choose a different approach."
                 ),
             )
         else:
             action_result = handle_mcp_tool_call_result(parsed_action)
 
     elif isinstance(parsed_action, DirectAppConnectionResult):
-        connection_result_boolean = parsed_action.success
-        connection_result_message = parsed_action.message
-        controls = parsed_action.controls_text
-        context = f"Direct App Control: Success? {connection_result_boolean}, message: {connection_result_message}"
-        if controls:
-            context += f"\nControls Found: {controls}"
+        tag = "" if parsed_action.success else "[ERROR] "
+        context = f"# Connect Result\n{tag}{parsed_action.message}"
+        if parsed_action.controls_text:
+            context += f"\n\n## Controls\n{parsed_action.controls_text}"
 
         action_result = ActionResult(
             signal="CONTINUE",
@@ -304,29 +285,28 @@ def call_action(
         )
 
     elif isinstance(parsed_action, DirectAppProcessList):
-        process_list_string = str(parsed_action)
-
         action_result = ActionResult(
             signal="CONTINUE",
-            additional_context=f"Processes Found: {process_list_string}",
+            additional_context=f"# Processes\n{str(parsed_action)}",
         )
 
     elif isinstance(parsed_action, DirectAppControlListResult):
         if parsed_action.error:
-            context = f"Controls Error: {parsed_action.error}"
+            context = f"# Controls\n[ERROR] {parsed_action.error}"
         elif parsed_action.controls:
-            context = f"Controls Found:\n{str(parsed_action)}"
+            context = f"# Controls\n{str(parsed_action)}"
         else:
-            context = "Controls Found: (none - UIA exposes no interactive controls for this window)"
+            context = "# Controls\n(none — no interactive controls exposed for this window)"
         action_result = ActionResult(
             signal="CONTINUE",
             additional_context=context,
         )
 
     elif isinstance(parsed_action, DirectAppInteractionResult):
+        tag = "" if parsed_action.success else "[ERROR] "
         action_result = ActionResult(
             signal="CONTINUE",
-            additional_context=f"Direct App Interaction: Success? {parsed_action.success}, Message: {parsed_action.message}",
+            additional_context=f"# Interaction Result\n{tag}{parsed_action.message}",
         )
 
     elif isinstance(parsed_action, DirectiveActionResult):

@@ -1,16 +1,12 @@
 # Python
 
-Runs arbitrary Python for computation/logic/data manipulation uncovered by other layers. Ranked #3 in Core's Interaction Layer Priority.
-
----
+Runs arbitrary Python for computation/logic/data manipulation uncovered by other layers.
 
 ## SCHEMA
 
 ```json
 {"action": "python", "code": "string", "history": "string"}
 ```
-
----
 
 ## CONSTRAINTS
 

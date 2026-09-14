@@ -1,8 +1,6 @@
 # Watchdogs
 
-Watchdogs allow you to send a `read_only` action for Kodo to watch it for you, when it changes or the timeout expires, it will automatically return the result. Use this when you want to be alerted when something changes without calling the same action.
-
----
+Send a read-only action once; Kodo re-runs it in the background and returns the result the moment it changes, or at timeout — no manual re-polling.
 
 ## SCHEMA
 
@@ -12,15 +10,10 @@ Watchdogs allow you to send a `read_only` action for Kodo to watch it for you, w
 
 The default `timeout` is `15`.
 
----
-
 ## CONSTRAINTS
 
-Do not use Watchdogs when the action changes state, do not put `pc_actions` or `direct_app_control` actions into the Watchdog.
-The exceptions to the `direct_app_control` actions are `list_processes` and `list_controls`, as these are read only actions.
-Do not put a skill that changes the PC state, and for skills, always trust their watchdog protocols, some skills may already implement actions that wait for the action to complete before restoring control back to you, such as the built-in `launch_windows_app`.
+Only watch read-only actions — never one that changes state. `pc_actions` and `direct_app_control` are disallowed except `list_processes`/`list_controls` (read-only). Skills that already implement their own wait-for-completion protocol (e.g. `launch_windows_app`) should not be wrapped in a watchdog — trust the skill's own protocol instead.
 
-**You must absolutely trust watchdog results.** When a watchdog returns, the watched condition has been met or timed out. Do NOT re-query the same tool to "confirm" — the watchdog result IS the confirmation. Kodo is helping you, not working against you. If an action is already being handled on your behalf (by a daemon, watchdog, or skill protocol), you do NOT need to run it yourself.
+A returned result — changed or timed out — IS the confirmation; see Core Principles on trusting convenience mechanisms.
 
-`clipboard_read` - Okay to watch, as it is a read-only process
-`open_app` from `launch_windows_app` - Not okay, changes PC state (Launches an app) and has it's own Watchdog protocols
+`clipboard_read` — okay to watch (read-only). `open_app` from `launch_windows_app` — not okay (changes PC state, has its own protocol).
