@@ -11,6 +11,8 @@ from settings.settings import settings
 from utils import logger
 from utils import toaster
 
+from utils.globals import CLAUDE_CODE_PROVIDER_SYSTEM_PROMPT_FILE_LOCATION
+
 _ARGV_BUDGET_CHARS = 4_000
 
 _TRANSIENT_ERRORS = (
@@ -101,7 +103,7 @@ class ClaudeCodeProvider(ModelProvider):
     def __init__(
         self,
         cli_path: str = "claude",
-        system_prompt_path: str = "system_prompt",
+        system_prompt_path: str = CLAUDE_CODE_PROVIDER_SYSTEM_PROMPT_FILE_LOCATION,
         timeout: int = 300,
         effort: str = "low",
         model: str = "sonnet",

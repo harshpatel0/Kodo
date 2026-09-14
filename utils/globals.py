@@ -106,3 +106,8 @@ AVAILABLE_INTERACTION_LAYERS: list[str] = [
     "python",
     "skills",
 ]
+
+RUNTIME_FILE_LOCATION = "temp"
+CLAUDE_CODE_PROVIDER_SYSTEM_PROMPT_FILE_LOCATION = (
+    f"{RUNTIME_FILE_LOCATION}/system_prompt"
+)
