@@ -414,8 +414,8 @@ def generate_context():
     apps_str = ", ".join(app_map.keys())
 
     context = {
-        "actor": f"""## App Launcher
-
+        "actor": f"""
+## App Launcher
 Launch any installed app directly instead of navigating the Start Menu.
 
 Installed apps: [{apps_str}]
@@ -425,24 +425,25 @@ Action: {{"action": "open_app", "app": "<name from the list above>", "background
 - `background: true` opens the app without stealing focus, and still returns its real PID for DirectAppControl. Packaged/Store apps (Calculator, Notepad, most UWP apps) always take focus regardless of this flag -- that's an OS limitation, not a bug; treat the launch as successful anyway.
 - Only launch apps from the list above; if the target isn't listed, use the web instead.
 - Match names loosely (e.g. "Chrome" -> "Google Chrome") using your judgement.
-- A launch is done once this action reports success -- don't also try the Start Menu.
+- A launch is done once this action reports success -- don't also try the Start Menu or the taskbar.
 - On failure, don't retry blindly: check the Taskbar for an already-running instance first, and if several versions exist, pick the one that best fits the task.
 """,
     }
 
     print(json.dumps(context))
-    sys.exit(0)
 
 
 if __name__ == "__main__":
     if "--generate" in sys.argv:
         generate_context()
+        sys.exit(0)
 
     try:
         args = json.loads(sys.argv[1])
     except (IndexError, json.JSONDecodeError):
         print(
-            "Error: Invalid or missing JSON arguments provided to skill.",
+            "Error: Invalid or missing JSON arguments provided to skill. ",
+            "The skill takes JSON as its parameters: {\"open_app\": \"appname\"}"
             file=sys.stderr,
         )
         sys.exit(1)
