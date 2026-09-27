@@ -2,12 +2,15 @@
 
 Kodo lets a local LLM take control of your Windows PC. It reads the live accessibility tree, reasons about what's on screen, and emits actions until the task is done. Clicks, keystrokes, file writes, code execution, whatever it takes. It runs entirely on your machine through [Ollama](https://ollama.com) if you choose to do so, so nothing leaves your computer.
 
-**It's not a polished product. It's a project that works well enough to be genuinely useful, built to see how far local models can go on real desktop tasks. Models get confused, occasionally do something baffling, and need hand-holding on complex apps. The architecture is designed to recover when that happens rather than just die.**
+**It's not a polished product. It's a project that works well enough to be genuinely useful (sometimes, you are way faster at doing the task than this is, don't expect GPT6 Astra Demo level stuff, unless you hook GPT-6, I haven't tested that one so). The architecture is designed to recover when that happens rather than just die.**
 **Expect crashes and unexpected behaviour**
 
 **Windows only.** The UI layer is built on pywinauto and the Windows UIA accessibility tree. macOS and Linux are not supported.
 
 **A note on the code.** The core logic and architecture are handwritten, with system prompts and user prompts being fully AI geneated. AI was also useful as a sounding board during design, helped write some of the smaller utility functions, and was involved in refactors and documentation (this README file). It's not vibe-coded, but it's not purely solo either.
+Clear disclosures are made where done.
+The API is fully AI-generated, I just gave it Kodo's orchestrator code and told it to make a REST API and that's it.
+Some skills are also AI-generated.
 
 ## Security Disclaimer (very important!)
 
@@ -150,10 +153,12 @@ Some real examples from development:
 
 **The Gemini incident.** The task was to open Gemini, write a comprehensive report on dinosaurs, and have Gemini proofread. The actor opened the browser, navigated to gemini.google.com, typed the task into the prompt box, and submitted it. Gemini responded with a report on dinosaurs. The actor looked at the screen, saw a report on dinosaurs, and emitted `done`. Its reasoning: *"looks like Gemini already generated a report on dinosaurs so I wouldn't need to."* It was technically correct. It was also completely wrong. Best and worst outcome simultaneously.
 
-**Word, planner mode.** Same report task, but in Microsoft Word with the planner architecture. The actor successfully opened Word, typed out a full report, and called done. No heading styles applied. No save. Just raw text in an unsaved document and a very satisfied `done` signal. The word-navigation skill exists largely because of sessions like this.
+**Word, planner mode.** Same report task, but in Microsoft Word with the planner architecture. The actor successfully opened Word, typed out a full report. The word-navigation skill exists largely because of sessions like this.
 
 The inconsistency is the main thing to be aware of going in. `action_settle_time`, iteration budgets, and the skill system all exist to give the model more chances to recover when it goes sideways. They help a lot, but they don't make the model reliable, they make unreliability survivable.
-While on this topic, it is likely that Exceptions from invalid inputs are triggered, they sometimes happen and sometimes don't, so I am sure I haven't caught 99.9% of them.
+While on this topic, it is likely that Exceptions from invalid inputs are triggered and caught, they sometimes happen and sometimes don't, so I am sure I haven't caught 99.9% of them.
+
+The project's Exception Handling is a mess.
 
 ---
 
@@ -402,5 +407,3 @@ The stdout, stderr, and a result type (`SUCCESS`, `ERROR`, `TIMEOUT`, `PY_EXCEPT
 ### A Few Other Things Worth Knowing
 
 The context provider attempts to auto-expand ComboBox elements while reading the tree. If a dropdown is collapsed, it calls the UIA expand interface on it before extracting its contents. This means the actor can see dropdown options without having to click them open first.
-
-There's a `strip_markdown_json` utility that strips markdown code fences from model responses before parsing. Models occasionally wrap their JSON output in backticks regardless of what the system prompt says, so it runs on every response as a precaution.
