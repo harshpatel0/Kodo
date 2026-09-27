@@ -1,5 +1,4 @@
-# Kodo (previously called LMControl)
-
+# Kodo
 Kodo lets a local LLM take control of your Windows PC. It reads the live accessibility tree, reasons about what's on screen, and emits actions until the task is done. Clicks, keystrokes, file writes, code execution, whatever it takes. It runs entirely on your machine through [Ollama](https://ollama.com) if you choose to do so, so nothing leaves your computer.
 
 **It's not a polished product. It's a project that works well enough to be genuinely useful (sometimes, you are way faster at doing the task than this is, don't expect GPT6 Astra Demo level stuff, unless you hook GPT-6, I haven't tested that one so). The architecture is designed to recover when that happens rather than just die.**
